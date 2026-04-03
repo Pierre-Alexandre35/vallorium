@@ -1,19 +1,84 @@
 # app/services/resource_service.py
-from datetime import datetime
-from fastapi import HTTPException, status
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Iterable
+
 from sqlalchemy.orm import Session
 
-from app.schemas.village import VillageResourceOut
-from app.schemas.resource import ResourceBalance
-from app.repositories import village_repo, resource_repo, building_repo
 import app.db.models as db
+from app.repositories import building_repo, resource_repo, village_repo
+from app.schemas.resource import ResourceBalance
+from app.schemas.village import VillageResourceOut
 
 
-def _cap_for(resource_name: str, wh_cap: int, gr_cap: int) -> int:
-    # Wood/Clay/Iron use Warehouse capacity, Crop uses Granary
-    if resource_name == "Crop":
-        return gr_cap
-    return wh_cap
+class VillageNotFoundError(Exception):
+    pass
+
+
+@dataclass(frozen=True)
+class StorageCaps:
+    warehouse: int
+    granary: int
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _normalize_dt(dt: datetime) -> datetime:
+    """
+    Ensure we always do arithmetic with timezone-aware UTC datetimes.
+    If DB returns naive UTC, treat it as UTC.
+    """
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _resource_name(resource_type_name: object) -> str:
+    """
+    Supports either enum-backed names or plain strings.
+    """
+    return getattr(resource_type_name, "value", str(resource_type_name))
+
+
+def _cap_for(resource_name: str, caps: StorageCaps) -> int:
+    return caps.granary if resource_name == "Crop" else caps.warehouse
+
+
+def _build_caps(warehouse_cap: int | None, granary_cap: int | None) -> StorageCaps:
+    if warehouse_cap is None or warehouse_cap <= 0:
+        raise ValueError("Invalid warehouse capacity")
+    if granary_cap is None or granary_cap <= 0:
+        raise ValueError("Invalid granary capacity")
+    return StorageCaps(warehouse=warehouse_cap, granary=granary_cap)
+
+
+def _to_rate_map(
+    production_rows: Iterable[tuple[int, object, int]],
+) -> dict[int, int]:
+    """
+    Expected row shape from repository:
+      (resource_type_id, resource_type_name, hourly_production)
+    """
+    rate_by_res_id: dict[int, int] = {}
+    for resource_type_id, _resource_name_unused, hourly_rate in production_rows:
+        rate_by_res_id[resource_type_id] = int(hourly_rate or 0)
+    return rate_by_res_id
+
+
+def _compute_gain(hourly_rate: int, elapsed_seconds: float) -> int:
+    """
+    Integer-only gain calculation.
+    Floors partial units, which is acceptable if last_updated is advanced only
+    when accrual is persisted.
+
+    If later you want perfect fractional carry, add a remainder column.
+    """
+    safe_elapsed = max(int(elapsed_seconds), 0)
+    return (hourly_rate * safe_elapsed) // 3600
 
 
 def accrue_and_get_balances(
@@ -22,53 +87,59 @@ def accrue_and_get_balances(
     owner_id: int,
     now: datetime | None = None,
 ) -> VillageResourceOut:
-    now = now or datetime.utcnow()
+    now_utc = _normalize_dt(now or _utcnow())
 
-    v = village_repo.get_village_by_id_and_owner(db_sess, village_id, owner_id)
-    if not v:
-        raise HTTPException(
-            status.HTTP_404_NOT_FOUND, detail="Village not found"
-        )
+    village = village_repo.get_village_by_id(
+        db_sess=db_sess,
+        owner_id=owner_id,
+        village_id=village_id,
+    )
+    if village is None:
+        raise VillageNotFoundError(village_id)
 
-    # Lock storages to avoid double-accrual under concurrency
-    storages = resource_repo.load_storages_for_update(db_sess, village_id)
+    # Lock resource storage rows to prevent concurrent double-accrual.
+    storages = resource_repo.load_storages_for_update(
+        db_sess=db_sess,
+        village_id=village_id,
+    )
 
-    # Precompute production rates per resource_id
-    rate_by_res_id = village_repo.get_production_by_resource_id(
-        db_sess, village_id
-    )  # per hour
+    production_rows = village_repo.get_village_production_by_resource_id(
+        db_sess=db_sess,
+        village_id=village_id,
+    )
+    rate_by_res_id = _to_rate_map(production_rows)
 
-    # Capacities from buildings
-    wh_cap, gr_cap = building_repo.get_storage_caps(db_sess, village_id)
+    warehouse_cap, granary_cap = building_repo.get_storage_caps(
+        db_sess=db_sess,
+        village_id=village_id,
+    )
+    caps = _build_caps(warehouse_cap, granary_cap)
 
-    # Accrue & clamp
-    for s in storages:
-        rid = s.resource_type_id
-        rname = getattr(s.resource_type.name, "value", s.resource_type.name)
-        rate_per_hour = rate_by_res_id.get(rid, 0)
-        elapsed = (now - s.last_updated).total_seconds()
-        gain = int((rate_per_hour / 3600.0) * max(elapsed, 0))
-        cap = _cap_for(rname, wh_cap, gr_cap)
+    for storage in storages:
+        last_updated_utc = _normalize_dt(storage.last_updated)
+        elapsed_seconds = (now_utc - last_updated_utc).total_seconds()
 
-        s.stored_amount = min(
-            s.stored_amount + gain, cap if cap else s.stored_amount + gain
-        )
-        s.last_updated = now
+        resource_name = _resource_name(storage.resource_type.name)
+        cap = _cap_for(resource_name, caps)
+        hourly_rate = rate_by_res_id.get(storage.resource_type_id, 0)
+        gain = _compute_gain(hourly_rate, elapsed_seconds)
+
+        new_amount = storage.stored_amount + gain
+        storage.stored_amount = min(new_amount, cap)
+        storage.last_updated = now_utc
 
     db_sess.commit()
 
-    # Build response
     balances = [
         ResourceBalance(
-            resource_type=getattr(
-                s.resource_type.name, "value", s.resource_type.name
-            ),
-            amount=s.stored_amount,
-            # If/when you extend your schema, you can also return capacity/percent/is_full here
+            resource_type=_resource_name(storage.resource_type.name),
+            amount=storage.stored_amount,
         )
-        for s in storages
+        for storage in storages
     ]
 
     return VillageResourceOut(
-        village_id=v.id, village_name=v.name, resources=balances
+        village_id=village.id,
+        village_name=village.name,
+        resources=balances,
     )

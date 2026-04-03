@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
@@ -52,14 +53,16 @@ def create_village(
     return village_repo.get_village_with_tile(db, v.id)
 
 
-def get_user_villages(db: Session, owner_id: int):
-    return village_repo.get_villages_by_owner_id(db, owner_id)
+def get_user_villages(
+    db: Session, owner_id: int
+) -> Optional[List[Village]]:
+    return village_repo.get_user_villages(db, owner_id)
 
 
 def get_user_village_by_id(
     db: Session, village_id: int, owner_id: int
 ) -> Village:
-    village = village_repo.get_village_by_id_and_owner(db, village_id, owner_id)
+    village = village_repo.get_village_by_id(db, owner_id, village_id)
     if not village:
         raise HTTPException(
             status.HTTP_404_NOT_FOUND,
