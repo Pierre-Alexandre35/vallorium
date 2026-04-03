@@ -1,5 +1,5 @@
 from typing import Optional
-from .base import AppBaseModel
+from app.common.schemas import AppBaseModel
 
 
 class Token(AppBaseModel):

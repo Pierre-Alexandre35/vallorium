@@ -5,9 +5,18 @@ from fastapi import APIRouter, Request, Depends, Response
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.core.auth import get_current_active_user, get_current_active_superuser
-from app.schemas.user import UserCreate, UserEdit, UserOut
-from app.services import user_service
+from app.core.auth import (
+    get_current_active_user,
+    get_current_active_superuser,
+)
+from app.domains.users.schemas import (
+    UserCreate,
+    UserEdit,
+    UserOut
+)
+
+from app.domains.users import service as user_service
+
 
 users_router = r = APIRouter()
 

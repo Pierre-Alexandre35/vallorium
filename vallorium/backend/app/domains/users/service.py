@@ -3,8 +3,9 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.db.models import User
-from app.repositories import user_repo
-from app.schemas.user import UserOut, UserCreate
+
+import app.domains.users.repository as user_repo
+from app.domains.users.schemas import UserOut, UserCreate
 from app.core.security import get_password_hash
 
 

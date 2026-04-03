@@ -1,6 +1,6 @@
 from typing import Optional
-from .base import AppBaseModel
-from .tribe import TribeOut
+from app.common.schemas import AppBaseModel
+from app.domains.tribes.schemas import TribeOut
 
 
 class UserBase(AppBaseModel):

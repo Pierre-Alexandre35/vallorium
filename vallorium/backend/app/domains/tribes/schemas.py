@@ -1,4 +1,4 @@
-from .base import AppBaseModel
+from app.common.schemas import AppBaseModel
 
 
 class TribeBase(AppBaseModel):
