@@ -1,4 +1,4 @@
-from typing import Sequence, Optional
+from typing import Sequence, Optional, List
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, and_
 import app.db.models as db
@@ -94,5 +94,76 @@ def get_village_production(db_sess: Session, village_id: int):
         )
         .filter(db.VillageFarmPlot.village_id == village_id)
         .group_by(db.ResourcesTypes.name)
+        .all()
+    )
+
+
+def get_user_villages(
+        db_sess: Session,
+        owner_id: int
+) -> Optional[List[db.Village]]:
+    return (
+        db_sess.query(db.Village)
+        .filter(db.Village.owner_id == owner_id)
+        .all()
+    )
+
+
+def get_village_by_id(
+    db_sess: Session,
+    owner_id: int,
+    village_id: int,
+) -> Optional[db.Village]:
+    return (
+        db_sess.query(db.Village)
+        .filter(
+            db.Village.id == village_id,
+            db.Village.owner_id == owner_id,
+        )
+        .one_or_none()
+    )
+
+
+def get_village_by_name_and_owner(
+    db_sess: Session,
+    village_name: str,
+    owner_id: int,
+) -> Optional[db.Village]:
+    return (
+        db_sess.query(db.Village)
+        .filter(
+            db.Village.name.ilike(village_name),
+            db.Village.owner_id == owner_id,
+        )
+        .one_or_none()
+    )
+
+
+def get_village_production_by_resource_id(
+    db_sess: Session,
+    village_id: int,
+):
+    return (
+        db_sess.query(
+            db.ResourcesTypes.id,
+            db.ResourcesTypes.name,
+            func.coalesce(func.sum(db.Production.production_value), 0),
+        )
+        .outerjoin(
+            db.VillageFarmPlot,
+            and_(
+                db.VillageFarmPlot.resource_type_id == db.ResourcesTypes.id,
+                db.VillageFarmPlot.village_id == village_id,
+            ),
+        )
+        .outerjoin(
+            db.Production,
+            and_(
+                db.Production.resource_type_id == db.VillageFarmPlot.resource_type_id,
+                db.Production.level == db.VillageFarmPlot.level,
+            ),
+        )
+        .group_by(db.ResourcesTypes.id, db.ResourcesTypes.name)
+        .order_by(db.ResourcesTypes.id)
         .all()
     )
