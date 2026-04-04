@@ -1,16 +1,12 @@
-FROM node:12
-
-ADD package.json /package.json
-
-ENV NODE_PATH=/node_modules
-ENV PATH=$PATH:/node_modules/.bin
-RUN npm install
+FROM node:20
 
 WORKDIR /app
-ADD . /app
 
-EXPOSE 8000
-EXPOSE 35729
+COPY package*.json ./
+RUN npm install
 
-ENTRYPOINT ["/bin/bash", "/app/run.sh"]
-CMD ["start"]
+COPY . .
+
+EXPOSE 5173
+
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
