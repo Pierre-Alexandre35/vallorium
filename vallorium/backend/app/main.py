@@ -1,69 +1,45 @@
-from fastapi import FastAPI, Depends
-from starlette.requests import Request
-import uvicorn
+from contextlib import asynccontextmanager
 
-from app.api.api_v1.routers.users import users_router
-from app.api.api_v1.routers.auth import auth_router
-from app.api.api_v1.routers.village import village_router
-from app.api.api_v1.routers.tribes import tribes_router
-from app.api.api_v1.routers.ressources import ressources_router
-from app.api.api_v1.routers.health import health_router
-from app.api.api_v1.routers.buildings import building_router
+from fastapi import FastAPI
 
-
-from app.core import config
-from app.db.session import SessionLocal
-from app.core.auth import get_current_active_user
-from app.core.celery_app import celery_app
-from app import tasks
+import app.core.config as settings
+from app.domains.users.router import users_router
+from app.domains.auth.router import auth_router
+from app.domains.villages.router import village_router
+from app.domains.tribes.router import tribes_router
+from app.domains.buildings.router import building_router
 
 
-app = FastAPI(
-    title=config.PROJECT_NAME, docs_url="/api/docs", openapi_url="/api"
-)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
 
 
-@app.middleware("http")
-async def db_session_middleware(request: Request, call_next):
-    request.state.db = SessionLocal()
-    response = await call_next(request)
-    request.state.db.close()
-    return response
+def create_app() -> FastAPI:
+    app = FastAPI(
+        title=settings.PROJECT_NAME,
+        version="1.0.0",
+        docs_url="/api/docs",
+        redoc_url="/api/redoc",
+        openapi_url="/api/openapi.json",
+        lifespan=lifespan,
+    )
+
+    @app.get("/", tags=["health"])
+    async def root_health():
+        return {"status": "ok"}
+
+    @app.get("/api/health", tags=["health"])
+    async def api_health():
+        return {"status": "ok"}
+
+    app.include_router(users_router, prefix="/api/v1", tags=["users"])
+    app.include_router(auth_router, prefix="/api/v1", tags=["auth"])
+    app.include_router(village_router, prefix="/api/v1", tags=["village"])
+    app.include_router(tribes_router, prefix="/api/v1", tags=["tribes"])
+    app.include_router(building_router, prefix="/api/v1", tags=["buildings"])
+
+    return app
 
 
-@app.get("/", tags=["health"])
-async def health_check():
-    return {"status": "ok"}
-
-
-@app.get("/api/v1/task")
-async def example_task():
-    celery_app.send_task("app.tasks.example_task", args=["Hello World"])
-
-    return {"message": "success"}
-
-
-app.include_router(
-    users_router,
-    prefix="/api/v1",
-    tags=["users"],
-    dependencies=[Depends(get_current_active_user)],
-)
-
-app.include_router(health_router, prefix="/api", tags=["health"])
-
-app.include_router(auth_router, prefix="/api", tags=["auth"])
-
-app.include_router(village_router, prefix="/api", tags=["village"])
-
-app.include_router(tribes_router, prefix="/api", tags=["tribes"])
-
-app.include_router(building_router, prefix="/api", tags=["buildings"])
-
-app.include_router(ressources_router, prefix="/api", tags=["ressources"])
-
-if __name__ == "__main__":
-    import os
-
-    port = int(os.environ.get("PORT", 8080))
-    uvicorn.run("main:app", host="0.0.0.0", port=port)
+app = create_app()

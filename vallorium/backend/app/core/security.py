@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from .crypto import get_password_hash, verify_password
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/token")
 
 
 SECRET_KEY = "{{cookiecutter.secret_key}}"
