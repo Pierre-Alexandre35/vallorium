@@ -1,4 +1,0 @@
-export enum USER_TYPE {
-  CLIENT = 'CLIENT',
-  MAINTAINER = 'MAINTAINER',
-}

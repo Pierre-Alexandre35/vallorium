@@ -1,8 +1,0 @@
-node_modules
-npm-debug.log
-dist
-.dockerignore
-.vscode
-**/.git
-**/.DS_Store
-**/node_modules

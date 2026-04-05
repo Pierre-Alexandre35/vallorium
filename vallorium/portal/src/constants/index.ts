@@ -1,1 +1,0 @@
-export { locationOptions } from './locations';
