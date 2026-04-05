@@ -1,30 +1,34 @@
 {
-  "name": "frontend",
+  "name": "travian-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint ."
   },
   "dependencies": {
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.9",
+    "@mui/material": "^7.3.9",
+    "axios": "^1.14.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.9.4"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.4",
-    "@types/node": "^24.12.0",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "eslint": "^9.39.4",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.4.0",
+    "@eslint/js": "^9.36.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^5.0.4",
+    "eslint": "^9.36.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.22",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.57.0",
-    "vite": "^8.0.1"
+    "typescript-eslint": "^8.44.1",
+    "vite": "^7.1.7"
   }
 }
