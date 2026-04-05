@@ -1,0 +1,26 @@
+/**
+ * Include Tailwind utilities, theme, etc...
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Extends the base layer of tailwind.
+ * Here, define global style attributes.
+ * see: https://tailwindcss.com/docs/adding-custom-styles#adding-base-styles
+ */
+@layer base {
+  html {
+    height: 100vh;
+  }
+  body,
+  #root {
+    height: 100%;
+  }
+
+  html,
+  body,
+  #root {
+    overflow: hidden;
+  }
+}

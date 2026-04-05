@@ -1,0 +1,1 @@
+export { CompactLayout } from './layout';

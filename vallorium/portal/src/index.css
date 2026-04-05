@@ -1,0 +1,46 @@
+@import '@qtm/web-components/dist/web-components/web-components.css';
+
+/**
+ * Since we are installing tailwind locally, importing qtm's utilities is unnecessary.
+ * 
+ * Open the file manually (in node-modules) and assess these utility classes are already available.
+ * 
+ * They are imported in the default utilities thanks to the '@qtm/tailwind-preset' in tailwind config,
+ * and later-on in your app with the '@tailwind utilities' directive from App.css.
+ *
+ * However, if you do not wish to install tailwind locally, uncomment the following line
+ * to benefit from the utility classes.
+ */
+/* @import '@qtm/css/dist/utilities.css'; */
+
+/**
+ * Import the Roboto font
+ */
+@import '@fontsource/roboto';
+@import '@fontsource/roboto-mono';
+
+/**
+ * As the fontsource documentation says, importing the '@fontsource/roboto'or the 
+ * '@fontsource/roboto-mono' only imports the font weight 400. In order to support more weight or styles, 
+ * and to import the same configuration as the CDN, you can import the fontsource as below:
+ */
+@import '@fontsource/roboto/100.css';
+@import '@fontsource/roboto/300.css';
+@import '@fontsource/roboto/400.css';
+@import '@fontsource/roboto/500.css';
+@import '@fontsource/roboto/700.css';
+@import '@fontsource/roboto/900.css';
+@import '@fontsource/roboto/100-italic.css';
+@import '@fontsource/roboto/300-italic.css';
+@import '@fontsource/roboto/400-italic.css';
+@import '@fontsource/roboto/500-italic.css';
+@import '@fontsource/roboto/700-italic.css';
+@import '@fontsource/roboto/900-italic.css';
+
+/* 
+ * Import material-icons and business-icons
+ * @see: https://developers.quantum.thalesdigital.io/react/1.4.0/getting-started/installation#install-icons
+ * @see: https://developers.quantum.thalesdigital.io/react/1.4.0/iconography 
+ */
+@import 'material-icons/iconfont/material-icons.css';
+@import '@qtm/icons';

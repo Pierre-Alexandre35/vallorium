@@ -1,0 +1,35 @@
+services:
+  webserver:
+    image: nginx
+    volumes:
+      - 'web_assets:/usr/share/nginx/html:ro' # mount build-output from app_builder
+      - './nginx.conf:/etc/nginx/nginx.conf:ro'
+    ports:
+      - ${SERVER_PORT}:80
+    depends_on:
+      app_builder:
+        condition: service_completed_successfully
+
+  app_builder:
+    tty: true
+    build:
+      context: .
+      secrets:
+        - buildenv
+        - appenv
+      args:
+        NODE_VERSION: 20.13.1 # match .nvmrc file
+        BUILD_OUTPUT_DIR: /output # mount a volume here
+    volumes:
+      - 'web_assets:/output' # match BUILD_OUTPUT_DIR variable
+
+secrets:
+  # Create these files from their corresponding .env[.name].example files
+  buildenv:
+    file: .env.build # contains variables needed when building the image (only)
+  appenv:
+    file: .env # contains variables needed when building the app (only)
+
+volumes:
+  web_assets:
+    driver: local

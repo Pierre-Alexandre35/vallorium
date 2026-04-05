@@ -1,0 +1,2 @@
+# Uses gitignore syntax
+**/helm/**/templates/*
