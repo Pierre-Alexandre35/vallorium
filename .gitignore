@@ -114,3 +114,4 @@ node_modules/
 
 # personal project notes 
 perso.txt
+.DS_Store
