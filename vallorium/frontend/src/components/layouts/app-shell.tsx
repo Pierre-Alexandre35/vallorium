@@ -1,5 +1,5 @@
-import type { PropsWithChildren } from 'react';
-import { Box, Container, Paper, Typography } from '@mui/material';
+import type { PropsWithChildren } from "react";
+import { Box, Container, Paper, Typography } from "@mui/material";
 
 interface AppShellProps extends PropsWithChildren {
   title: string;
@@ -9,10 +9,10 @@ export function AppShell({ title, children }: AppShellProps) {
   return (
     <Box
       sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        bgcolor: 'grey.100',
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        bgcolor: "grey.100",
         py: 4,
       }}
     >
