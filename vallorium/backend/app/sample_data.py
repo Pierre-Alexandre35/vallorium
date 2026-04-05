@@ -1,17 +1,19 @@
 # seed.py
 from faker import Faker
 
-from app.db.session import SessionLocal
-from app.services.user_service import create_user
-from app.services.village_service import create_village
+from vallorium.backend.old_backend.app.db.session import SessionLocal
+from vallorium.backend.old_backend.app.services.user_service import create_user
+from vallorium.backend.old_backend.app.services.village_service import (
+    create_village,
+)
 
 
 # ORM models & enums (aliased as `db` to prevent name collisions)
-import app.db.models as db
+import vallorium.backend.old_backend.app.db.models as db
 
 # Pydantic DTOs
-from app.schemas.user import UserCreate
-from app.schemas.village import VillageCreate
+from vallorium.backend.old_backend.app.schemas.user import UserCreate
+from vallorium.backend.old_backend.app.schemas.village import VillageCreate
 
 
 fake = Faker()

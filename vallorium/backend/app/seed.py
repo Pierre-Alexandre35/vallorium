@@ -8,13 +8,15 @@ from typing import Any
 from sqlalchemy import insert
 from sqlalchemy.orm import Session
 
-from app.db.session import SessionLocal
-import app.db.models as db
-from app.core.crypto import get_password_hash
-from app.core.config_loader import game_config
+from vallorium.backend.old_backend.app.db.session import SessionLocal
+import vallorium.backend.old_backend.app.db.models as db
+from vallorium.backend.app.core.crypto import get_password_hash
+from vallorium.backend.app.core.config_loader import game_config
 
 
-def timed_step(label: str, fn: Callable[[Session], None], sess: Session) -> None:
+def timed_step(
+    label: str, fn: Callable[[Session], None], sess: Session
+) -> None:
     start = time.perf_counter()
     fn(sess)
     elapsed = time.perf_counter() - start
@@ -53,7 +55,9 @@ def seed_resources(sess: Session) -> None:
     existing = {r.name for r in sess.query(db.ResourcesTypes).all()}
 
     rows_to_add = [
-        db.ResourcesTypes(name=res) for res in db.Resource if res not in existing
+        db.ResourcesTypes(name=res)
+        for res in db.Resource
+        if res not in existing
     ]
 
     if rows_to_add:
@@ -95,7 +99,9 @@ def seed_admin_user(sess: Session) -> None:
         print("ℹ️ Admin user already exists; skipping.")
         return
 
-    tribe = sess.query(db.TribeAttributes).filter_by(name=db.Tribe.ROMANS).first()
+    tribe = (
+        sess.query(db.TribeAttributes).filter_by(name=db.Tribe.ROMANS).first()
+    )
     if not tribe:
         raise ValueError("Romans tribe must be seeded first.")
 
@@ -213,7 +219,9 @@ def seed_warehouse_and_granary_capacity(sess: Session) -> None:
     for level_str, cap in warehouse_capacity_values.items():
         level = int(level_str)
         if level not in existing_w:
-            warehouse_rows.append(db.WarehouseCapacity(level=level, capacity=cap))
+            warehouse_rows.append(
+                db.WarehouseCapacity(level=level, capacity=cap)
+            )
 
     if granary_rows:
         sess.add_all(granary_rows)
@@ -239,7 +247,9 @@ def seed_buildings(sess: Session) -> None:
         print("ℹ️ No buildings found in config; skipping.")
         return
 
-    resource_types = {r.name.name: r for r in sess.query(db.ResourcesTypes).all()}
+    resource_types = {
+        r.name.name: r for r in sess.query(db.ResourcesTypes).all()
+    }
     if not resource_types:
         raise ValueError("Resources must be seeded before buildings.")
 
