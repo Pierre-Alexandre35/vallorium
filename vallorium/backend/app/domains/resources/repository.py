@@ -1,6 +1,5 @@
-from typing import Dict, Sequence, List
-from sqlalchemy.orm import Session
-from sqlalchemy import func
+from typing import Dict, Sequence
+from sqlalchemy.orm import Session, joinedload
 import app.db.models as db
 
 
@@ -25,13 +24,13 @@ def insert_initial_storage(
         db_sess.bulk_save_objects(rows)
 
 
-def load_storages_for_update(
-    db_sess: Session, village_id: int
+def load_storages(
+    db_sess: Session,
+    village_id: int,
 ) -> Sequence[db.VillageResourceStorage]:
-    # row-level lock during accrual
     return (
         db_sess.query(db.VillageResourceStorage)
+        .options(joinedload(db.VillageResourceStorage.resource_type))
         .filter(db.VillageResourceStorage.village_id == village_id)
-        .with_for_update()
         .all()
     )

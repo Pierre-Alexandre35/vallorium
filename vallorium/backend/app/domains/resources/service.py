@@ -52,6 +52,7 @@ def _cap_for(resource_name: str, caps: StorageCaps) -> int:
 def _build_caps(
     warehouse_cap: int | None, granary_cap: int | None
 ) -> StorageCaps:
+    print(12345)
     if warehouse_cap is None or warehouse_cap <= 0:
         raise ValueError("Invalid warehouse capacity")
     if granary_cap is None or granary_cap <= 0:
@@ -101,7 +102,7 @@ def accrue_and_get_balances(
         raise VillageNotFoundError(village_id)
 
     # Lock resource storage rows to prevent concurrent double-accrual.
-    storages = resource_repo.load_storages_for_update(
+    storages = resource_repo.load_storages(
         db_sess=db_sess,
         village_id=village_id,
     )
