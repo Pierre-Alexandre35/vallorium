@@ -22,7 +22,6 @@ services:
     build:
       context: backend
       dockerfile: Dockerfile
-    working_dir: /app
     env_file: [backend/.env.local]
     environment:
       PYTHONPATH: /app

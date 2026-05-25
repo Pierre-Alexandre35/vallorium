@@ -8,10 +8,10 @@ from typing import Any
 from sqlalchemy import insert
 from sqlalchemy.orm import Session
 
-from vallorium.backend.old_backend.app.db.session import SessionLocal
-import vallorium.backend.old_backend.app.db.models as db
-from vallorium.backend.app.core.crypto import get_password_hash
-from vallorium.backend.app.core.config_loader import game_config
+from app.db.session import SessionLocal
+import app.db.models as db
+from app.core.crypto import get_password_hash
+from app.core.config_loader import game_config
 
 
 def timed_step(

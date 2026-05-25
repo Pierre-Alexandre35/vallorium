@@ -25,6 +25,7 @@ passlib = "^1.7.4"
 pyjwt = ">=2.8,<3"
 python-multipart = "^0.0.20"
 celery = "^5.5.3"
+psycopg2 = "^2.9.12"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"

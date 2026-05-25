@@ -45,42 +45,40 @@ def resources_enum_name_by_id(db_sess: Session) -> Dict[int, str]:
     return {r.id: r.name.name for r in rows}
 
 
-def get_storage_caps(db_sess: Session, village_id: int) -> tuple[int, int]:
-    """
-    Return (warehouse_capacity, granary_capacity) for a village.
+def get_storage_caps_by_village_ids(
+    db_sess: Session,
+    village_ids: list[int],
+) -> dict[int, tuple[int, int]]:
+    if not village_ids:
+        return {}
 
-    Current assumption:
-    - village_resource_storage has one row per resource
-    - building capacities are determined from configured capacity tables
-    - if you do not yet store actual village building levels for warehouse/granary,
-      this falls back to level 0
-
-    Replace the level lookup part with your real village-building table once present.
-    """
-
-    # TODO: replace these defaults with real village building levels once you have
-    # a village buildings table such as VillageBuilding / VillageStructure.
-    warehouse_level = 0
-    granary_level = 0
-
-    warehouse_row = (
-        db_sess.query(db.WarehouseCapacity)
-        .filter(db.WarehouseCapacity.level == warehouse_level)
-        .one_or_none()
-    )
-    granary_row = (
-        db_sess.query(db.GranaryCapacity)
-        .filter(db.GranaryCapacity.level == granary_level)
-        .one_or_none()
+    rows = (
+        db_sess.query(
+            db.Building.village_id,
+            db.BuildingType.name,
+            func.sum(db.BuildingLevel.storage_capacity).label("capacity"),
+        )
+        .join(
+            db.BuildingType, db.Building.building_type_id == db.BuildingType.id
+        )
+        .join(db.BuildingLevel, db.Building.level_id == db.BuildingLevel.id)
+        .filter(db.Building.village_id.in_(village_ids))
+        .filter(db.BuildingType.name.in_(["Warehouse", "Granary"]))
+        .group_by(db.Building.village_id, db.BuildingType.name)
+        .all()
     )
 
-    if warehouse_row is None:
-        raise ValueError(
-            f"Missing warehouse capacity configuration for level {warehouse_level}"
-        )
-    if granary_row is None:
-        raise ValueError(
-            f"Missing granary capacity configuration for level {granary_level}"
-        )
+    result: dict[int, dict[str, int]] = defaultdict(
+        lambda: {"Warehouse": 0, "Granary": 0}
+    )
 
-    return int(warehouse_row.capacity), int(granary_row.capacity)
+    for village_id, building_name, capacity in rows:
+        result[village_id][str(building_name)] = int(capacity or 0)
+
+    return {
+        village_id: (
+            caps["Warehouse"],
+            caps["Granary"],
+        )
+        for village_id, caps in result.items()
+    }

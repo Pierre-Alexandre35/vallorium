@@ -1,4 +1,3 @@
-# app/services/resource_service.py
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -29,19 +28,12 @@ def _utcnow() -> datetime:
 
 
 def _normalize_dt(dt: datetime) -> datetime:
-    """
-    Ensure we always do arithmetic with timezone-aware UTC datetimes.
-    If DB returns naive UTC, treat it as UTC.
-    """
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)
 
 
 def _resource_name(resource_type_name: object) -> str:
-    """
-    Supports either enum-backed names or plain strings.
-    """
     return getattr(resource_type_name, "value", str(resource_type_name))
 
 
@@ -52,7 +44,6 @@ def _cap_for(resource_name: str, caps: StorageCaps) -> int:
 def _build_caps(
     warehouse_cap: int | None, granary_cap: int | None
 ) -> StorageCaps:
-    print(12345)
     if warehouse_cap is None or warehouse_cap <= 0:
         raise ValueError("Invalid warehouse capacity")
     if granary_cap is None or granary_cap <= 0:
@@ -63,10 +54,6 @@ def _build_caps(
 def _to_rate_map(
     production_rows: Iterable[tuple[int, object, int]],
 ) -> dict[int, int]:
-    """
-    Expected row shape from repository:
-      (resource_type_id, resource_type_name, hourly_production)
-    """
     rate_by_res_id: dict[int, int] = {}
     for resource_type_id, _resource_name_unused, hourly_rate in production_rows:
         rate_by_res_id[resource_type_id] = int(hourly_rate or 0)
@@ -74,23 +61,16 @@ def _to_rate_map(
 
 
 def _compute_gain(hourly_rate: int, elapsed_seconds: float) -> int:
-    """
-    Integer-only gain calculation.
-    Floors partial units, which is acceptable if last_updated is advanced only
-    when accrual is persisted.
-
-    If later you want perfect fractional carry, add a remainder column.
-    """
     safe_elapsed = max(int(elapsed_seconds), 0)
     return (hourly_rate * safe_elapsed) // 3600
 
 
-def accrue_and_get_balances(
+def get_computed_balance_map(
     db_sess: Session,
     village_id: int,
     owner_id: int,
     now: datetime | None = None,
-) -> VillageResourceOut:
+) -> dict[str, int]:
     now_utc = _normalize_dt(now or _utcnow())
 
     village = village_repo.get_village_by_id(
@@ -101,7 +81,6 @@ def accrue_and_get_balances(
     if village is None:
         raise VillageNotFoundError(village_id)
 
-    # Lock resource storage rows to prevent concurrent double-accrual.
     storages = resource_repo.load_storages(
         db_sess=db_sess,
         village_id=village_id,
@@ -119,6 +98,8 @@ def accrue_and_get_balances(
     )
     caps = _build_caps(warehouse_cap, granary_cap)
 
+    result: dict[str, int] = {}
+
     for storage in storages:
         last_updated_utc = _normalize_dt(storage.last_updated)
         elapsed_seconds = (now_utc - last_updated_utc).total_seconds()
@@ -128,22 +109,54 @@ def accrue_and_get_balances(
         hourly_rate = rate_by_res_id.get(storage.resource_type_id, 0)
         gain = _compute_gain(hourly_rate, elapsed_seconds)
 
-        new_amount = storage.stored_amount + gain
-        storage.stored_amount = min(new_amount, cap)
-        storage.last_updated = now_utc
+        computed_amount = min(storage.stored_amount + gain, cap)
+        result[resource_name.lower()] = computed_amount
 
-    db_sess.commit()
+    return result
 
-    balances = [
-        ResourceBalance(
-            resource_type=_resource_name(storage.resource_type.name),
-            amount=storage.stored_amount,
-        )
-        for storage in storages
-    ]
 
-    return VillageResourceOut(
-        village_id=village.id,
-        village_name=village.name,
-        resources=balances,
+def get_computed_balance_maps_by_village_ids(
+    db_sess: Session,
+    village_ids: list[int],
+    production_rows_by_village_id: dict[int, list[tuple[int, object, int]]],
+    caps_by_village_id: dict[int, tuple[int, int]],
+    now: datetime | None = None,
+) -> dict[int, dict[str, int]]:
+    now_utc = _normalize_dt(now or _utcnow())
+
+    storages_by_village_id = resource_repo.load_storages_by_village_ids(
+        db_sess=db_sess,
+        village_ids=village_ids,
     )
+
+    results: dict[int, dict[str, int]] = {}
+
+    for village_id in village_ids:
+        storages = storages_by_village_id.get(village_id, [])
+        production_rows = production_rows_by_village_id.get(village_id, [])
+        warehouse_cap, granary_cap = caps_by_village_id.get(village_id, (0, 0))
+
+        if warehouse_cap <= 0 or granary_cap <= 0:
+            results[village_id] = {}
+            continue
+
+        caps = _build_caps(warehouse_cap, granary_cap)
+        rate_by_res_id = _to_rate_map(production_rows)
+
+        village_balances: dict[str, int] = {}
+
+        for storage in storages:
+            last_updated_utc = _normalize_dt(storage.last_updated)
+            elapsed_seconds = (now_utc - last_updated_utc).total_seconds()
+
+            resource_name = _resource_name(storage.resource_type.name)
+            cap = _cap_for(resource_name, caps)
+            hourly_rate = rate_by_res_id.get(storage.resource_type_id, 0)
+            gain = _compute_gain(hourly_rate, elapsed_seconds)
+
+            computed_amount = min(storage.stored_amount + gain, cap)
+            village_balances[resource_name.lower()] = computed_amount
+
+        results[village_id] = village_balances
+
+    return results

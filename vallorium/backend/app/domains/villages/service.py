@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
+
 from app.domains.resources.schemas import ResourceProduction, ResourceBalance
 from app.domains.villages.schemas import (
     VillageProductionOut,
@@ -42,7 +43,6 @@ def create_village(
 
     village_repo.insert_farm_plots(db, v.id, layouts)
 
-    # Hardcoded starter pack
     starter_pack = {
         1: 50,  # WOOD
         2: 75,  # CLAY
@@ -84,14 +84,51 @@ def get_user_village_by_name(db: Session, name: str, owner_id: int) -> Village:
 def get_village_production_summary(db: Session, village_id: int, owner_id: int):
     village = get_user_village_by_id(db, village_id, owner_id)
     production = village_repo.get_village_production(db, village_id)
+
     return VillageProductionOut(
         village_id=village.id,
         village_name=village.name,
         production=[
-            ResourceProduction(resource_type=res, total=int(total or 0))
+            ResourceProduction(
+                resource_type=getattr(res, "value", str(res)),
+                total=int(total or 0),
+            )
             for res, total in production
         ],
     )
+
+
+def get_village_production_map(db: Session, village_id: int) -> dict[str, int]:
+    production_rows = village_repo.get_village_production(db, village_id)
+
+    return {
+        getattr(resource_name, "value", str(resource_name)).lower(): int(
+            total or 0
+        )
+        for resource_name, total in production_rows
+    }
+
+
+def get_village_production_maps_by_village_ids(
+    db: Session,
+    village_ids: list[int],
+) -> dict[int, dict[str, int]]:
+    rows_by_village_id = village_repo.get_village_production_by_village_ids(
+        db_sess=db,
+        village_ids=village_ids,
+    )
+
+    result: dict[int, dict[str, int]] = {}
+
+    for village_id, rows in rows_by_village_id.items():
+        result[village_id] = {
+            getattr(resource_name, "value", str(resource_name)).lower(): int(
+                total or 0
+            )
+            for _resource_type_id, resource_name, total in rows
+        }
+
+    return result
 
 
 def get_village_resource_balances(db: Session, village_id: int, owner_id: int):
@@ -99,7 +136,6 @@ def get_village_resource_balances(db: Session, village_id: int, owner_id: int):
     now = datetime.utcnow()
     storages = resource_repo.load_storages_for_update(db, village_id)
 
-    # Calculate resource accrual
     balances = []
     for storage in storages:
         prod = village_repo.get_resource_production_value(
@@ -116,7 +152,10 @@ def get_village_resource_balances(db: Session, village_id: int, owner_id: int):
         village_id=village.id,
         village_name=village.name,
         resources=[
-            ResourceBalance(resource_type=name, amount=amount)
+            ResourceBalance(
+                resource_type=getattr(name, "value", str(name)),
+                amount=amount,
+            )
             for name, amount in balances
         ],
     )
