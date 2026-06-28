@@ -59,9 +59,7 @@ async def get_my_village(
     """
     Get a specific village owned by the current authenticated user.
     """
-    return village_service.get_user_village_by_id(
-        db, village_id, current_user.id
-    )
+    return village_service.get_user_village_by_id(db, village_id, current_user.id)
 
 
 @village_router.get(
@@ -77,9 +75,7 @@ async def get_village_by_name(
     """
     Get a specific village by its unique name, owned by the current user.
     """
-    return village_service.get_user_village_by_name(
-        db, village_name, current_user.id
-    )
+    return village_service.get_user_village_by_name(db, village_name, current_user.id)
 
 
 @village_router.get(
@@ -105,14 +101,16 @@ async def get_village_resource_production(
     response_model=VillageResourceOut,
     response_model_exclude_none=True,
 )
-async def get_village_resource_balance(
+def get_village_resource_balance(
     village_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """
-    Get the current balance of each resource type in a village (after accrual).
+    Get the current balance of each resource type in a village after accrual.
     """
-    return resouce_service.accrue_and_get_balances(
-        db_sess=db, village_id=village_id, owner_id=current_user.id
+    return village_service.get_village_resource_balances(
+        db=db,
+        village_id=village_id,
+        owner_id=current_user.id,
     )

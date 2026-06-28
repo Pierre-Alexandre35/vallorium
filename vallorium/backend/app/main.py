@@ -9,6 +9,7 @@ from app.domains.auth.router import auth_router
 from app.domains.villages.router import village_router
 from app.domains.tribes.router import tribes_router
 from app.domains.buildings.router import building_router
+from app.domains.dashboards.router import dashboard_router
 
 
 @asynccontextmanager
@@ -48,6 +49,7 @@ def create_app() -> FastAPI:
     app.include_router(village_router, prefix="/api/v1", tags=["village"])
     app.include_router(tribes_router, prefix="/api/v1", tags=["tribes"])
     app.include_router(building_router, prefix="/api/v1", tags=["buildings"])
+    app.include_router(dashboard_router, prefix="/api/v1", tags=["dashboard"])
 
     return app
 

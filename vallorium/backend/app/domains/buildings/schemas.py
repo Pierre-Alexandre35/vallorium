@@ -1,46 +1,56 @@
-from typing import List, Optional, Dict
+from typing import List, Optional
 from app.common.schemas import AppBaseModel
 
 
-class ResourceCost(AppBaseModel):
-    resource_id: Optional[int] = None  # e.g., 1 for WOOD
-    resource_type: str  # e.g., "WOOD"
+class BuildingTypeBase(AppBaseModel):
+    name: str
+    description: Optional[str] = None
+    tribe_id: Optional[int] = None
+
+
+class BuildingTypeOut(BuildingTypeBase):
+    id: int
+
+
+class BuildingUpgradeResourceOut(AppBaseModel):
+    id: int
+    resource_type_id: int
     amount: int
 
 
 class BuildingPrerequisiteOut(AppBaseModel):
-    required_building: str  # building name
+    required_building_type_id: int
     required_level: int
 
 
 class BuildingLevelOut(AppBaseModel):
+    id: int
+    building_type_id: int
     level: int
-    time: int
+    construction_time: int
     population_required: int
-    cost: List[ResourceCost]
-    prerequisites: Optional[List[BuildingPrerequisiteOut]] = []
+    costs: List[BuildingUpgradeResourceOut] = []
+    prerequisites: List[BuildingPrerequisiteOut] = []
 
 
-class BuildingTypeOut(AppBaseModel):
-    name: str
-    description: Optional[str] = None
-    levels: List[BuildingLevelOut]
-
-
-class BuildingCatalogOut(AppBaseModel):
-    tribe: Optional[str] = None
-    buildings: List[BuildingTypeOut]
+class BuildingTypeWithLevelsOut(BuildingTypeOut):
+    levels: List[BuildingLevelOut] = []
 
 
 class BuildingLevelAvailabilityOut(AppBaseModel):
-    building: str
-    level: int
+    building_type_id: int
+    building_name: str
+    next_level: int
     can_build: bool
-    unmet: List[str]
-    cost: List[ResourceCost]
-    population_required: int
-    prerequisites: List[BuildingPrerequisiteOut]
+    missing_requirements: List[str] = []
+    construction_time: Optional[int] = None
+    population_required: Optional[int] = None
 
 
 class BuildingAvailabilityListOut(AppBaseModel):
+    village_id: int
     items: List[BuildingLevelAvailabilityOut]
+
+
+class BuildingCatalogOut(AppBaseModel):
+    items: List[BuildingTypeWithLevelsOut]

@@ -13,9 +13,7 @@ def fetch_building_catalog(
     q = (
         db_sess.query(db.BuildingType)
         .options(
-            joinedload(db.BuildingType.levels).joinedload(
-                db.BuildingLevel.costs
-            ),
+            joinedload(db.BuildingType.levels).joinedload(db.BuildingLevel.costs),
             joinedload(db.BuildingType.levels)
             .joinedload(db.BuildingLevel.prerequisites)
             .joinedload(db.BuildingPrerequisite.required_building_type),
@@ -45,42 +43,44 @@ def resources_enum_name_by_id(db_sess: Session) -> Dict[int, str]:
     return {r.id: r.name.name for r in rows}
 
 
-def get_storage_caps(db_sess: Session, village_id: int) -> tuple[int, int]:
-    """
-    Return (warehouse_capacity, granary_capacity) for a village.
+def get_storage_caps_by_village_ids(
+    db_sess: Session,
+    village_ids: list[int],
+) -> dict[int, tuple[int, int]]:
+    if not village_ids:
+        return {}
 
-    Current assumption:
-    - village_resource_storage has one row per resource
-    - building capacities are determined from configured capacity tables
-    - if you do not yet store actual village building levels for warehouse/granary,
-      this falls back to level 0
-
-    Replace the level lookup part with your real village-building table once present.
-    """
-
-    # TODO: replace these defaults with real village building levels once you have
-    # a village buildings table such as VillageBuilding / VillageStructure.
-    warehouse_level = 0
-    granary_level = 0
-
-    warehouse_row = (
-        db_sess.query(db.WarehouseCapacity)
-        .filter(db.WarehouseCapacity.level == warehouse_level)
-        .one_or_none()
-    )
-    granary_row = (
-        db_sess.query(db.GranaryCapacity)
-        .filter(db.GranaryCapacity.level == granary_level)
-        .one_or_none()
+    # Prefer explicit level 0 capacity.
+    warehouse_cap = (
+        db_sess.query(db.WarehouseCapacity.capacity)
+        .filter(db.WarehouseCapacity.level == 0)
+        .scalar()
     )
 
-    if warehouse_row is None:
-        raise ValueError(
-            f"Missing warehouse capacity configuration for level {warehouse_level}"
-        )
-    if granary_row is None:
-        raise ValueError(
-            f"Missing granary capacity configuration for level {granary_level}"
+    granary_cap = (
+        db_sess.query(db.GranaryCapacity.capacity)
+        .filter(db.GranaryCapacity.level == 0)
+        .scalar()
+    )
+
+    # Fallback in case the seeded capacity tables start at level 1.
+    if warehouse_cap is None:
+        warehouse_cap = (
+            db_sess.query(db.WarehouseCapacity.capacity)
+            .order_by(db.WarehouseCapacity.level.asc())
+            .limit(1)
+            .scalar()
         )
 
-    return int(warehouse_row.capacity), int(granary_row.capacity)
+    if granary_cap is None:
+        granary_cap = (
+            db_sess.query(db.GranaryCapacity.capacity)
+            .order_by(db.GranaryCapacity.level.asc())
+            .limit(1)
+            .scalar()
+        )
+
+    warehouse_cap = int(warehouse_cap or 0)
+    granary_cap = int(granary_cap or 0)
+
+    return {village_id: (warehouse_cap, granary_cap) for village_id in village_ids}

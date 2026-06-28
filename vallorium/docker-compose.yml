@@ -1,4 +1,17 @@
 services:
+
+  migrate:
+    profiles: ["migrate"]
+    build:
+      context: backend
+      dockerfile: Dockerfile
+    env_file: [backend/.env.local]
+    environment:
+      PYTHONPATH: /app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: bash -lc 'alembic upgrade head && python -m app.seed'
   postgres:
     image: postgres:17
     environment:
@@ -17,21 +30,6 @@ services:
     image: redis:7
     ports: ["6379:6379"]
 
-  # Only runs when explicitly invoked (profile "migrate")
-  migrate:
-    build:
-      context: backend
-      dockerfile: Dockerfile
-    working_dir: /app
-    env_file: [backend/.env.local]
-    environment:
-      PYTHONPATH: /app
-    depends_on:
-      postgres:
-        condition: service_healthy
-    command: bash -lc 'alembic upgrade head && python -m app.seed'
-    profiles: ["migrate"]
-
   backend:
     build:
       context: backend
@@ -48,20 +46,20 @@ services:
         condition: service_healthy
     ports: ["8080:8080"]
 
-  worker:
-    build:
-      context: backend
-      dockerfile: Dockerfile
-    working_dir: /app
-    env_file: [backend/.env.local]
-    environment:
-      PYTHONPATH: /app
-    command: celery --app app.tasks worker --loglevel=DEBUG -Q main-queue -c 1
-    volumes:
-      - ./backend:/app:cached
-    depends_on:
-      postgres:
-        condition: service_healthy
+  # worker:
+  #   build:
+  #     context: backend
+  #     dockerfile: Dockerfile
+  #   working_dir: /app
+  #   env_file: [backend/.env.local]
+  #   environment:
+  #     PYTHONPATH: /app
+  #   command: celery --app app.tasks worker --loglevel=DEBUG -Q main-queue -c 1
+  #   volumes:
+  #     - ./backend:/app:cached
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
 
   flower:
     image: mher/flower

@@ -2,6 +2,7 @@ from typing import Sequence, Optional, List
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, and_
 import app.db.models as db
+from collections import defaultdict
 
 
 def tile_is_occupied(db_sess: Session, map_tile_id: int) -> bool:
@@ -24,12 +25,7 @@ def get_tile_layouts(
 
 
 def insert_village(
-    db_sess: Session,
-    *,
-    name: str,
-    map_tile_id: int,
-    population: int,
-    owner_id: int
+    db_sess: Session, *, name: str, map_tile_id: int, population: int, owner_id: int
 ) -> db.Village:
     v = db.Village(
         name=name,
@@ -64,9 +60,7 @@ def insert_farm_plots(
         db_sess.bulk_save_objects(rows)
 
 
-def get_village_with_tile(
-    db_sess: Session, village_id: int
-) -> Optional[db.Village]:
+def get_village_with_tile(db_sess: Session, village_id: int) -> Optional[db.Village]:
     return (
         db_sess.query(db.Village)
         .options(joinedload(db.Village.tile))
@@ -77,9 +71,7 @@ def get_village_with_tile(
 
 def get_village_production(db_sess: Session, village_id: int):
     return (
-        db_sess.query(
-            db.ResourcesTypes.name, func.sum(db.Production.production_value)
-        )
+        db_sess.query(db.ResourcesTypes.name, func.sum(db.Production.production_value))
         .join(
             db.VillageFarmPlot,
             db.VillageFarmPlot.resource_type_id == db.ResourcesTypes.id,
@@ -87,8 +79,7 @@ def get_village_production(db_sess: Session, village_id: int):
         .join(
             db.Production,
             and_(
-                db.Production.resource_type_id
-                == db.VillageFarmPlot.resource_type_id,
+                db.Production.resource_type_id == db.VillageFarmPlot.resource_type_id,
                 db.Production.level == db.VillageFarmPlot.level,
             ),
         )
@@ -98,12 +89,8 @@ def get_village_production(db_sess: Session, village_id: int):
     )
 
 
-def get_user_villages(
-    db_sess: Session, owner_id: int
-) -> Optional[List[db.Village]]:
-    return (
-        db_sess.query(db.Village).filter(db.Village.owner_id == owner_id).all()
-    )
+def get_user_villages(db_sess: Session, owner_id: int) -> Optional[List[db.Village]]:
+    return db_sess.query(db.Village).filter(db.Village.owner_id == owner_id).all()
 
 
 def get_village_by_id(
@@ -136,32 +123,52 @@ def get_village_by_name_and_owner(
     )
 
 
-def get_village_production_by_resource_id(
+def get_village_production_by_village_ids(
     db_sess: Session,
-    village_id: int,
-):
-    return (
+    village_ids: list[int],
+) -> dict[int, list[tuple[int, object, int]]]:
+    if not village_ids:
+        return {}
+
+    rows = (
         db_sess.query(
-            db.ResourcesTypes.id,
-            db.ResourcesTypes.name,
-            func.coalesce(func.sum(db.Production.production_value), 0),
-        )
-        .outerjoin(
-            db.VillageFarmPlot,
-            and_(
-                db.VillageFarmPlot.resource_type_id == db.ResourcesTypes.id,
-                db.VillageFarmPlot.village_id == village_id,
+            db.VillageFarmPlot.village_id,
+            db.ResourcesTypes.id.label("resource_type_id"),
+            db.ResourcesTypes.name.label("resource_type_name"),
+            func.coalesce(func.sum(db.Production.production_value), 0).label(
+                "hourly_production"
             ),
         )
-        .outerjoin(
+        .join(
+            db.ResourcesTypes,
+            db.VillageFarmPlot.resource_type_id == db.ResourcesTypes.id,
+        )
+        .join(
             db.Production,
             and_(
-                db.Production.resource_type_id
-                == db.VillageFarmPlot.resource_type_id,
+                db.Production.resource_type_id == db.VillageFarmPlot.resource_type_id,
                 db.Production.level == db.VillageFarmPlot.level,
             ),
         )
-        .group_by(db.ResourcesTypes.id, db.ResourcesTypes.name)
-        .order_by(db.ResourcesTypes.id)
+        .filter(db.VillageFarmPlot.village_id.in_(village_ids))
+        .group_by(
+            db.VillageFarmPlot.village_id,
+            db.ResourcesTypes.id,
+            db.ResourcesTypes.name,
+        )
         .all()
     )
+
+    grouped: dict[int, list[tuple[int, object, int]]] = defaultdict(list)
+
+    for (
+        village_id,
+        resource_type_id,
+        resource_type_name,
+        hourly_production,
+    ) in rows:
+        grouped[village_id].append(
+            (resource_type_id, resource_type_name, int(hourly_production or 0))
+        )
+
+    return dict(grouped)
