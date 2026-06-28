@@ -9,8 +9,6 @@ from sqlalchemy.orm import Session
 import app.domains.buildings.repository as building_repo
 import app.domains.resources.repository as resource_repo
 import app.domains.villages.repository as village_repo
-from app.domains.resources.schemas import ResourceBalance
-from app.domains.villages.schemas import VillageResourceOut
 
 
 class VillageNotFoundError(Exception):
@@ -41,9 +39,7 @@ def _cap_for(resource_name: str, caps: StorageCaps) -> int:
     return caps.granary if resource_name == "Crop" else caps.warehouse
 
 
-def _build_caps(
-    warehouse_cap: int | None, granary_cap: int | None
-) -> StorageCaps:
+def _build_caps(warehouse_cap: int | None, granary_cap: int | None) -> StorageCaps:
     if warehouse_cap is None or warehouse_cap <= 0:
         raise ValueError("Invalid warehouse capacity")
     if granary_cap is None or granary_cap <= 0:
@@ -86,16 +82,22 @@ def get_computed_balance_map(
         village_id=village_id,
     )
 
-    production_rows = village_repo.get_village_production_by_resource_id(
+    production_rows = village_repo.get_village_production_by_village_ids(
         db_sess=db_sess,
-        village_id=village_id,
-    )
+        village_ids=[village_id],
+    ).get(village_id, [])
     rate_by_res_id = _to_rate_map(production_rows)
 
-    warehouse_cap, granary_cap = building_repo.get_storage_caps(
+    caps_by_village_id = building_repo.get_storage_caps_by_village_ids(
         db_sess=db_sess,
-        village_id=village_id,
+        village_ids=[village_id],
     )
+
+    warehouse_cap, granary_cap = caps_by_village_id.get(
+        village_id,
+        (None, None),
+    )
+
     caps = _build_caps(warehouse_cap, granary_cap)
 
     result: dict[str, int] = {}

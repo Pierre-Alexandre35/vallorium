@@ -1,1 +1,0 @@
-docker compose up -d postgres redis backend worker frontend nginx

@@ -8,35 +8,18 @@ packages = [{ include = "app" }]
 [tool.poetry.dependencies]
 python = "^3.13"
 
-# ---- FastAPI stack pinned for Pydantic v1 ----
-fastapi = "0.103.2"     # compatible with Pydantic v1
-pydantic = "<2"         # you use Config.orm_mode
-starlette = "<=0.27.0"  # matches FastAPI 0.103.x
-uvicorn = {extras = ["standard"], version = "^0.30"}
+fastapi = "^0.116"
+pydantic = "^2.8"
+pydantic-settings = "^2.0"
+uvicorn = { extras = ["standard"], version = "^0.35" }
 
-SQLAlchemy = "^2.0"
-alembic = "^1.13"
+sqlalchemy = "^2.0"
+alembic = "^1.16"
 
-# Postgres driver (avoid local C builds on macOS/Apple Silicon)
-psycopg = {extras = ["binary"], version = "^3.1"}  # psycopg3
-# If you must keep psycopg2 instead, use this (Python 3.13 compatible):
-# psycopg2-binary = ">=2.9.10"
-passlib = "^1.7.4"
-pyjwt = ">=2.8,<3"
+psycopg = { extras = ["binary"], version = "^3.2" }
+passlib = {version = "1.7.4", extras = ["bcrypt"]}
+pyjwt = "^2.10"
 python-multipart = "^0.0.20"
-celery = "^5.5.3"
+celery = "^5.5"
 psycopg2 = "^2.9.12"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.0"
-httpx = "^0.27"
-black = "^24.0"
-ruff = "^0.5"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-# Your existing Black settings
-[tool.black]
-line-length = 80
+bcrypt = "4.0.1"

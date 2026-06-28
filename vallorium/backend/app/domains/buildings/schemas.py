@@ -19,7 +19,6 @@ class BuildingUpgradeResourceOut(AppBaseModel):
 
 
 class BuildingPrerequisiteOut(AppBaseModel):
-    id: int
     required_building_type_id: int
     required_level: int
 

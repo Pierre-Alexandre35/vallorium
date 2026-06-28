@@ -17,23 +17,27 @@ building_router = APIRouter()
     tags=["Buildings"],
     summary="Get building catalog for a tribe",
 )
-async def list_buildings_by_tribe(
+def list_buildings_by_tribe(
     tribe_id: int,
     request: Request,
     db: Session = Depends(get_db),
 ):
-    # Validate tribe
     tribe = tribe_service.get_tribe_by_id(db, tribe_id)
     if not tribe:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Tribe not found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tribe not found",
         )
 
-    # Get buildings
-    buildings = building_service.list_building_catalog(db, tribe_id=tribe_id)
+    buildings = building_service.list_building_catalog(
+        db,
+        tribe_id=tribe_id,
+    )
 
-    # Response model
-    result = BuildingCatalogOut(tribe=tribe.name, buildings=buildings)
+    result = BuildingCatalogOut(items=buildings)
 
-    # Send with ETag-based caching
-    return cached_response(result, max_age=86400, request=request)
+    return cached_response(
+        result,
+        max_age=86400,
+        request=request,
+    )

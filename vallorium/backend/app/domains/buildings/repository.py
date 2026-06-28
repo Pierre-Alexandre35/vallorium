@@ -13,9 +13,7 @@ def fetch_building_catalog(
     q = (
         db_sess.query(db.BuildingType)
         .options(
-            joinedload(db.BuildingType.levels).joinedload(
-                db.BuildingLevel.costs
-            ),
+            joinedload(db.BuildingType.levels).joinedload(db.BuildingLevel.costs),
             joinedload(db.BuildingType.levels)
             .joinedload(db.BuildingLevel.prerequisites)
             .joinedload(db.BuildingPrerequisite.required_building_type),
@@ -52,33 +50,37 @@ def get_storage_caps_by_village_ids(
     if not village_ids:
         return {}
 
-    rows = (
-        db_sess.query(
-            db.Building.village_id,
-            db.BuildingType.name,
-            func.sum(db.BuildingLevel.storage_capacity).label("capacity"),
-        )
-        .join(
-            db.BuildingType, db.Building.building_type_id == db.BuildingType.id
-        )
-        .join(db.BuildingLevel, db.Building.level_id == db.BuildingLevel.id)
-        .filter(db.Building.village_id.in_(village_ids))
-        .filter(db.BuildingType.name.in_(["Warehouse", "Granary"]))
-        .group_by(db.Building.village_id, db.BuildingType.name)
-        .all()
+    # Prefer explicit level 0 capacity.
+    warehouse_cap = (
+        db_sess.query(db.WarehouseCapacity.capacity)
+        .filter(db.WarehouseCapacity.level == 0)
+        .scalar()
     )
 
-    result: dict[int, dict[str, int]] = defaultdict(
-        lambda: {"Warehouse": 0, "Granary": 0}
+    granary_cap = (
+        db_sess.query(db.GranaryCapacity.capacity)
+        .filter(db.GranaryCapacity.level == 0)
+        .scalar()
     )
 
-    for village_id, building_name, capacity in rows:
-        result[village_id][str(building_name)] = int(capacity or 0)
-
-    return {
-        village_id: (
-            caps["Warehouse"],
-            caps["Granary"],
+    # Fallback in case the seeded capacity tables start at level 1.
+    if warehouse_cap is None:
+        warehouse_cap = (
+            db_sess.query(db.WarehouseCapacity.capacity)
+            .order_by(db.WarehouseCapacity.level.asc())
+            .limit(1)
+            .scalar()
         )
-        for village_id, caps in result.items()
-    }
+
+    if granary_cap is None:
+        granary_cap = (
+            db_sess.query(db.GranaryCapacity.capacity)
+            .order_by(db.GranaryCapacity.level.asc())
+            .limit(1)
+            .scalar()
+        )
+
+    warehouse_cap = int(warehouse_cap or 0)
+    granary_cap = int(granary_cap or 0)
+
+    return {village_id: (warehouse_cap, granary_cap) for village_id in village_ids}

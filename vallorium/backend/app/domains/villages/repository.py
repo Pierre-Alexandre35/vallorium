@@ -25,12 +25,7 @@ def get_tile_layouts(
 
 
 def insert_village(
-    db_sess: Session,
-    *,
-    name: str,
-    map_tile_id: int,
-    population: int,
-    owner_id: int
+    db_sess: Session, *, name: str, map_tile_id: int, population: int, owner_id: int
 ) -> db.Village:
     v = db.Village(
         name=name,
@@ -65,9 +60,7 @@ def insert_farm_plots(
         db_sess.bulk_save_objects(rows)
 
 
-def get_village_with_tile(
-    db_sess: Session, village_id: int
-) -> Optional[db.Village]:
+def get_village_with_tile(db_sess: Session, village_id: int) -> Optional[db.Village]:
     return (
         db_sess.query(db.Village)
         .options(joinedload(db.Village.tile))
@@ -78,9 +71,7 @@ def get_village_with_tile(
 
 def get_village_production(db_sess: Session, village_id: int):
     return (
-        db_sess.query(
-            db.ResourcesTypes.name, func.sum(db.Production.production_value)
-        )
+        db_sess.query(db.ResourcesTypes.name, func.sum(db.Production.production_value))
         .join(
             db.VillageFarmPlot,
             db.VillageFarmPlot.resource_type_id == db.ResourcesTypes.id,
@@ -88,8 +79,7 @@ def get_village_production(db_sess: Session, village_id: int):
         .join(
             db.Production,
             and_(
-                db.Production.resource_type_id
-                == db.VillageFarmPlot.resource_type_id,
+                db.Production.resource_type_id == db.VillageFarmPlot.resource_type_id,
                 db.Production.level == db.VillageFarmPlot.level,
             ),
         )
@@ -99,12 +89,8 @@ def get_village_production(db_sess: Session, village_id: int):
     )
 
 
-def get_user_villages(
-    db_sess: Session, owner_id: int
-) -> Optional[List[db.Village]]:
-    return (
-        db_sess.query(db.Village).filter(db.Village.owner_id == owner_id).all()
-    )
+def get_user_villages(db_sess: Session, owner_id: int) -> Optional[List[db.Village]]:
+    return db_sess.query(db.Village).filter(db.Village.owner_id == owner_id).all()
 
 
 def get_village_by_id(
@@ -160,8 +146,7 @@ def get_village_production_by_village_ids(
         .join(
             db.Production,
             and_(
-                db.Production.resource_type_id
-                == db.VillageFarmPlot.resource_type_id,
+                db.Production.resource_type_id == db.VillageFarmPlot.resource_type_id,
                 db.Production.level == db.VillageFarmPlot.level,
             ),
         )
