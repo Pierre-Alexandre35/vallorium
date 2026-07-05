@@ -20,6 +20,17 @@ psycopg = { extras = ["binary"], version = "^3.2" }
 passlib = {version = "1.7.4", extras = ["bcrypt"]}
 pyjwt = "^2.10"
 python-multipart = "^0.0.20"
-celery = "^5.5"
-psycopg2 = "^2.9.12"
+celery = {version = "^5.5", extras = ["redis"]}
 bcrypt = "4.0.1"
+authlib = "^1.7.2"
+httpx = "^0.28.1"
+jinja2 = "^3.1.6"
+itsdangerous = "^2.2.0"
+sqlalchemy-utils = "^0.42.1"
+python-dateutil = "^2.9.0.post0"
+pyyaml = "^6.0.3"
+faker = "^40.23.0"
+
+[tool.poetry.group.dev.dependencies]
+ipython = "^9.15.0"
+
