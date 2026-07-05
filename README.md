@@ -21,13 +21,12 @@ To conquer, you'll need to raise an army—each tribe has its own unique units a
 
 ## 🗄️ Running
 
-Please note this will only run the back-end that is still in development.
-
-⚠️ **Docker** is required to launch the server. Build and start the application using:
+⚠️ **Docker** and **Docker Compose** are required.
 
 ```
 cd vallorium
-./scripts/build.sh
+docker compose run migrate # to run only once
+docker compose up
 ```
 
 This script will:
