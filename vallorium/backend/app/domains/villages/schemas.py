@@ -31,3 +31,20 @@ class VillageResourceOut(AppBaseModel):
     village_id: int
     village_name: str
     resources: List[ResourceBalance]
+
+
+class FarmUpgradeOut(AppBaseModel):
+    upgrade_id: int
+
+    village_id: int
+    village_name: str
+
+    farm_id: int
+    farm_number: int
+    resource_type: str
+
+    current_level: int
+    target_level: int
+
+    status: str
+    duration_seconds: int

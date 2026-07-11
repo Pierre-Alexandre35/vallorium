@@ -57,3 +57,15 @@ def load_storages_by_village_ids(
         grouped[row.village_id].append(row)
 
     return dict(grouped)
+
+
+def load_storages_for_update(
+    db_sess: Session,
+    village_id: int,
+) -> list[db.VillageResourceStorage]:
+    return (
+        db_sess.query(db.VillageResourceStorage)
+        .filter(db.VillageResourceStorage.village_id == village_id)
+        .with_for_update()
+        .all()
+    )

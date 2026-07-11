@@ -10,6 +10,7 @@ from app.domains.villages.schemas import (
     VillageOut,
     VillageProductionOut,
     VillageResourceOut,
+    FarmUpgradeOut,
 )
 from app.core.auth import get_current_active_user
 from app.db.models import User
@@ -112,5 +113,24 @@ def get_village_resource_balance(
     return village_service.get_village_resource_balances(
         db=db,
         village_id=village_id,
+        owner_id=current_user.id,
+    )
+
+
+@village_router.post(
+    "/villages/{village_id}/farms/{farm_plot_id}/upgrade",
+    response_model=FarmUpgradeOut,
+    response_model_exclude_none=True,
+)
+def upgrade_farm_level(
+    village_id: int,
+    farm_plot_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> FarmUpgradeOut:
+    return village_service.upgrade_farm_level(
+        db=db,
+        village_id=village_id,
+        farm_plot_id=farm_plot_id,
         owner_id=current_user.id,
     )
