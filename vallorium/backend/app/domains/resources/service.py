@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Iterable
+from typing import Iterable, Mapping
 
 from sqlalchemy.orm import Session
 
@@ -13,6 +13,23 @@ import app.domains.villages.repository as village_repo
 
 class VillageNotFoundError(Exception):
     pass
+
+
+class InsufficientResourcesError(Exception):
+    def __init__(
+        self,
+        resource_type_id: int,
+        required: int,
+        available: int,
+    ) -> None:
+        self.resource_type_id = resource_type_id
+        self.required = required
+        self.available = available
+
+        super().__init__(
+            f"Insufficient resource {resource_type_id}: "
+            f"required={required}, available={available}"
+        )
 
 
 @dataclass(frozen=True)
@@ -117,6 +134,77 @@ def get_computed_balance_map(
     return result
 
 
+def settle_and_lock_village_resources(
+    db_sess: Session,
+    village_id: int,
+    now: datetime | None = None,
+):
+
+    now_utc = _normalize_dt(now or _utcnow())
+
+    storages = resource_repo.load_storages_for_update(
+        db_sess=db_sess,
+        village_id=village_id,
+    )
+
+    production_rows = village_repo.get_village_production_by_village_ids(
+        db_sess=db_sess,
+        village_ids=[village_id],
+    ).get(village_id, [])
+
+    rate_by_res_id = _to_rate_map(production_rows)
+
+    caps_by_village_id = building_repo.get_storage_caps_by_village_ids(
+        db_sess=db_sess,
+        village_ids=[village_id],
+    )
+
+    warehouse_cap, granary_cap = caps_by_village_id.get(
+        village_id,
+        (None, None),
+    )
+
+    caps = _build_caps(
+        warehouse_cap=warehouse_cap,
+        granary_cap=granary_cap,
+    )
+
+    storage_by_resource_id = {}
+
+    for storage in storages:
+        last_updated_utc = _normalize_dt(storage.last_updated)
+
+        elapsed_seconds = (now_utc - last_updated_utc).total_seconds()
+
+        resource_name = _resource_name(storage.resource_type.name)
+
+        capacity = _cap_for(
+            resource_name=resource_name,
+            caps=caps,
+        )
+
+        hourly_rate = rate_by_res_id.get(
+            storage.resource_type_id,
+            0,
+        )
+
+        gain = _compute_gain(
+            hourly_rate=hourly_rate,
+            elapsed_seconds=elapsed_seconds,
+        )
+
+        storage.stored_amount = min(
+            storage.stored_amount + gain,
+            capacity,
+        )
+
+        storage.last_updated = now_utc
+
+        storage_by_resource_id[storage.resource_type_id] = storage
+
+    return storage_by_resource_id
+
+
 def get_computed_balance_maps_by_village_ids(
     db_sess: Session,
     village_ids: list[int],
@@ -162,3 +250,72 @@ def get_computed_balance_maps_by_village_ids(
         results[village_id] = village_balances
 
     return results
+
+
+@dataclass(frozen=True)
+class ResourceDelta:
+    resource_type_id: int
+    amount: int
+
+
+def spend_resources(
+    db_sess: Session,
+    village_id: int,
+    costs: Mapping[int, int],
+    now: datetime | None = None,
+) -> list[ResourceDelta]:
+    """
+    Settle production, validate all costs, and deduct resources.
+
+    The caller must already have authorized access to the village.
+
+    This function does not commit or roll back.
+    """
+
+    normalized_costs: dict[int, int] = {}
+
+    for resource_type_id, amount in costs.items():
+        resource_id = int(resource_type_id)
+        required_amount = int(amount)
+
+        normalized_costs[resource_id] = (
+            normalized_costs.get(resource_id, 0) + required_amount
+        )
+
+    if not normalized_costs:
+        return []
+
+    storages = settle_and_lock_village_resources(
+        db_sess=db_sess,
+        village_id=village_id,
+        now=now,
+    )
+
+    # Validate all resources first.
+    # Do not partially deduct anything.
+    for resource_type_id, required_amount in normalized_costs.items():
+        storage = storages.get(resource_type_id)
+
+        if storage.stored_amount < required_amount:
+            raise InsufficientResourcesError(
+                resource_type_id=resource_type_id,
+                required=required_amount,
+                available=storage.stored_amount,
+            )
+
+    deltas: list[ResourceDelta] = []
+
+    # All resources are sufficient, so deductions can now be applied.
+    for resource_type_id, required_amount in normalized_costs.items():
+        storage = storages[resource_type_id]
+
+        storage.stored_amount -= required_amount
+
+        deltas.append(
+            ResourceDelta(
+                resource_type_id=resource_type_id,
+                amount=-required_amount,
+            )
+        )
+
+    return deltas

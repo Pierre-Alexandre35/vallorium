@@ -1,0 +1,58 @@
+.root {
+  position: relative;
+  width: 100%;
+  min-height: 540px;
+  height: min(72vh, 760px);
+  overflow: hidden;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 50% 15%, rgba(255, 255, 255, 0.42), transparent 38%),
+    #dce8b4;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.root:active {
+  cursor: grabbing;
+}
+
+.root canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+.loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: rgba(246, 241, 230, 0.6);
+  backdrop-filter: blur(3px);
+}
+
+.coordinateHint {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  padding: 7px 10px;
+  border: 1px solid rgba(53, 106, 66, 0.22);
+  border-radius: 10px;
+  color: #35503a;
+  background: rgba(255, 253, 248, 0.88);
+  box-shadow: 0 6px 18px rgba(41, 55, 35, 0.12);
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+@media (max-width: 700px) {
+  .root {
+    min-height: 430px;
+    height: 62vh;
+    border-radius: 12px;
+  }
+}

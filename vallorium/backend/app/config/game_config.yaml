@@ -41,6 +41,103 @@ capacities:
     "9": 8200
     "10": 9350
 
+farm_levels:
+  WOOD:
+    - level: 0
+      production_per_hour: 30
+      construction_time_seconds: 0
+      cost: {}
+
+    - level: 1
+      production_per_hour: 40
+      construction_time_seconds: 60
+      cost:
+        WOOD: 40
+        CLAY: 100
+        IRON: 50
+        CROP: 60
+
+    - level: 2
+      production_per_hour: 50
+      construction_time_seconds: 120
+      cost:
+        WOOD: 65
+        CLAY: 165
+        IRON: 85
+        CROP: 100
+
+  CLAY:
+    - level: 0
+      production_per_hour: 30
+      construction_time_seconds: 0
+      cost: {}
+
+    - level: 1
+      production_per_hour: 40
+      construction_time_seconds: 60
+      cost:
+        WOOD: 80
+        CLAY: 40
+        IRON: 80
+        CROP: 50
+
+    - level: 2
+      production_per_hour: 50
+      construction_time_seconds: 120
+      cost:
+        WOOD: 135
+        CLAY: 65
+        IRON: 135
+        CROP: 85
+
+  IRON:
+    - level: 0
+      production_per_hour: 30
+      construction_time_seconds: 0
+      cost: {}
+
+    - level: 1
+      production_per_hour: 40
+      construction_time_seconds: 60
+      cost:
+        WOOD: 100
+        CLAY: 80
+        IRON: 30
+        CROP: 60
+
+    - level: 2
+      production_per_hour: 50
+      construction_time_seconds: 120
+      cost:
+        WOOD: 165
+        CLAY: 135
+        IRON: 50
+        CROP: 100
+
+  CROP:
+    - level: 0
+      production_per_hour: 30
+      construction_time_seconds: 0
+      cost: {}
+
+    - level: 1
+      production_per_hour: 40
+      construction_time_seconds: 60
+      cost:
+        WOOD: 70
+        CLAY: 90
+        IRON: 70
+        CROP: 20
+
+    - level: 2
+      production_per_hour: 50
+      construction_time_seconds: 120
+      cost:
+        WOOD: 115
+        CLAY: 150
+        IRON: 115
+        CROP: 35
+
 buildings:
   - name: "Main Building"
     description: "Reduces construction time"

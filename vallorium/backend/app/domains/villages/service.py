@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
@@ -8,13 +8,14 @@ from app.domains.villages.schemas import (
     VillageProductionOut,
     VillageResourceOut,
     VillageCreate,
+    FarmUpgradeOut,
 )
 import app.domains.villages.repository as village_repo
 import app.domains.resources.repository as resource_repo
 import app.domains.resources.service as resource_service
 
 
-from app.db.models import Village
+from app.db.models import Village, UpgradeStatus
 
 
 def create_village(db: Session, village: VillageCreate, owner_id: int) -> Village:
@@ -79,7 +80,9 @@ def get_user_village_by_name(db: Session, name: str, owner_id: int) -> Village:
     return village
 
 
-def get_village_production_summary(db: Session, village_id: int, owner_id: int):
+def get_village_production_summary(
+    db: Session, village_id: int, owner_id: int
+) -> VillageProductionOut:
     village = get_user_village_by_id(db, village_id, owner_id)
     production = village_repo.get_village_production(db, village_id)
 
@@ -133,3 +136,141 @@ def get_village_resource_balances(
             for resource_name, amount in balance_map.items()
         ],
     )
+
+
+def upgrade_farm_level(
+    db: Session,
+    village_id: int,
+    farm_plot_id: int,
+    owner_id: int,
+) -> FarmUpgradeOut:
+    try:
+        # Verify ownership and lock the farm in one query.
+        farm_plot = village_repo.get_owned_farm_plot_for_update(
+            db_sess=db,
+            village_id=village_id,
+            farm_plot_id=farm_plot_id,
+            owner_id=owner_id,
+        )
+
+        if farm_plot is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Farm plot not found or unauthorized.",
+            )
+
+        # Prevent another active upgrade on this farm.
+        if village_repo.has_active_farm_upgrade(
+            db_sess=db,
+            farm_plot_id=farm_plot.id,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This farm is already being upgraded.",
+            )
+
+        target_level = farm_plot.level + 1
+
+        # Load reference data for the target level.
+        level_definition = village_repo.get_farm_level_with_costs(
+            db_sess=db,
+            farm_resource_type_id=farm_plot.resource_type_id,
+            level=target_level,
+        )
+
+        if level_definition is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Level {target_level} is not configured " "for this farm type."
+                ),
+            )
+
+        duration_seconds = int(level_definition.construction_time_seconds)
+
+        if duration_seconds <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="The farm upgrade duration is invalid.",
+            )
+
+        if not level_definition.costs:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="No resource costs are configured for this upgrade.",
+            )
+
+        costs = {
+            int(cost.payment_resource_type_id): int(cost.amount)
+            for cost in level_definition.costs
+        }
+
+        now = datetime.now(timezone.utc)
+
+        # Settle current production, lock storage rows,
+        # validate balances and deduct the costs.
+        resource_service.spend_resources(
+            db_sess=db,
+            village_id=farm_plot.village_id,
+            costs=costs,
+            now=now,
+        )
+
+        completes_at = now + timedelta(seconds=duration_seconds)
+
+        upgrade = village_repo.insert_farm_upgrade(
+            db_sess=db,
+            farm_plot_id=farm_plot.id,
+            from_level=farm_plot.level,
+            target_level=target_level,
+            status=UpgradeStatus.IN_PROGRESS,
+            started_at=now,
+            completes_at=completes_at,
+            actual_duration_seconds=duration_seconds,
+        )
+
+        db.flush()
+        db.commit()
+        db.refresh(upgrade)
+
+        resource_type_name = getattr(
+            farm_plot.resource_type.name,
+            "value",
+            str(farm_plot.resource_type.name),
+        )
+
+        upgrade_status = getattr(
+            upgrade.status,
+            "value",
+            str(upgrade.status),
+        )
+
+        return FarmUpgradeOut(
+            upgrade_id=upgrade.id,
+            village_id=farm_plot.village_id,
+            village_name=farm_plot.village.name,
+            farm_id=farm_plot.id,
+            farm_number=farm_plot.farm_number,
+            resource_type=resource_type_name,
+            current_level=upgrade.from_level,
+            target_level=upgrade.target_level,
+            status=upgrade_status,
+            duration_seconds=upgrade.actual_duration_seconds,
+        )
+
+    except HTTPException:
+        db.rollback()
+        raise
+
+    except resource_service.InsufficientResourcesError as exc:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "message": "Not enough resources for this upgrade.",
+                "resource_type_id": exc.resource_type_id,
+                "required": exc.required,
+                "available": exc.available,
+            },
+        ) from exc

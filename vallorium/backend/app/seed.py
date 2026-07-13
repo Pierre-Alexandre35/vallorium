@@ -1,21 +1,105 @@
+"""Idempotent development seed for the Vallorium data model.
+
+Seed policy
+-----------
+REFERENCE_MASTER
+    Seeded and updated from ``game_config``:
+    resources_types, tribe_attributes, farm_level, farm_level_cost,
+    building_type, building_level, building_level_cost,
+    building_prerequisite, granary_capacity, warehouse_capacity.
+
+CORE_WORLD
+    Seeded here only where appropriate:
+    optional development admin user, map_tile, map_tile_resource_layout.
+
+CURRENT_STATE
+    NOT globally seeded. ``village_farm_plots``, ``village_building``, and
+    ``village_resource_storage`` must be created by the village-onboarding
+    application service for a specific village.
+
+RUNTIME_TRANSACTION
+    NEVER seeded. ``village_farm_upgrade`` and ``village_building_upgrade``
+    are created by gameplay commands.
+
+LEDGER_TRANSACTION
+    NEVER globally seeded. ``village_resource_transaction`` and its entries
+    are written atomically whenever a village's resource balance changes.
+
+Expected farm configuration
+---------------------------
+Preferred flat form::
+
+    "farm_levels": [
+        {
+            "resource": "WOOD",
+            "level": 0,
+            "production_per_hour": 30,
+            "construction_time_seconds": 0,
+            "cost": {}
+        },
+        {
+            "resource": "WOOD",
+            "level": 1,
+            "production_per_hour": 40,
+            "construction_time_seconds": 60,
+            "cost": {"WOOD": 40, "CLAY": 100, "IRON": 50, "CROP": 60}
+        }
+    ]
+
+The grouped form is also accepted::
+
+    "farm_levels": {
+        "WOOD": [{"level": 0, ...}, {"level": 1, ...}],
+        "CLAY": [...],
+        "IRON": [...],
+        "CROP": [...]
+    }
+"""
+
 from __future__ import annotations
 
+import os
 import random
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
-from sqlalchemy import insert
+from sqlalchemy import insert, select
 from sqlalchemy.orm import Session
 
-from app.db.session import SessionLocal
 import app.db.models as db
-from app.core.crypto import get_password_hash
 from app.core.config_loader import game_config
+from app.core.crypto import get_password_hash
+from app.db.session import SessionLocal
+
+SEED_POLICY: dict[str, tuple[str, ...]] = {
+    "REFERENCE_MASTER": (
+        "resources_types",
+        "tribe_attributes",
+        "farm_level",
+        "farm_level_cost",
+        "building_type",
+        "building_level",
+        "building_level_cost",
+        "building_prerequisite",
+        "granary_capacity",
+        "warehouse_capacity",
+    ),
+    "CORE_WORLD": (
+        "user (development admin only)",
+        "map_tile",
+        "map_tile_resource_layout",
+    ),
+    "CURRENT_STATE": (),
+    "RUNTIME_TRANSACTION": (),
+    "LEDGER_TRANSACTION": (),
+}
 
 
 def timed_step(
-    label: str, fn: Callable[[Session], None], sess: Session
+    label: str,
+    fn: Callable[[Session], None],
+    sess: Session,
 ) -> None:
     start = time.perf_counter()
     fn(sess)
@@ -30,350 +114,690 @@ def commit_phase(sess: Session, label: str) -> None:
     print(f"💾 Commit '{label}': {elapsed:.2f}s")
 
 
+def _enum_from_config(enum_class: type[Any], raw_value: Any) -> Any:
+    """Accept an enum member, member name (WOOD), or value (Wood)."""
+    if isinstance(raw_value, enum_class):
+        return raw_value
+
+    if not isinstance(raw_value, str):
+        raise ValueError(
+            f"Expected {enum_class.__name__} as a string or enum member; "
+            f"received {raw_value!r}."
+        )
+
+    normalized = raw_value.strip()
+
+    try:
+        return enum_class[normalized.upper()]
+    except KeyError:
+        pass
+
+    for member in enum_class:
+        if str(member.value).casefold() == normalized.casefold():
+            return member
+
+    valid = [member.name for member in enum_class]
+    raise ValueError(
+        f"Unknown {enum_class.__name__} value {raw_value!r}. "
+        f"Expected one of {valid}."
+    )
+
+
+def _resource_rows_by_enum(sess: Session) -> dict[db.Resource, db.ResourcesTypes]:
+    rows = sess.scalars(select(db.ResourcesTypes)).all()
+    return {row.name: row for row in rows}
+
+
+def _resource_row(
+    resource_rows: Mapping[db.Resource, db.ResourcesTypes],
+    raw_value: Any,
+) -> db.ResourcesTypes:
+    resource = _enum_from_config(db.Resource, raw_value)
+    try:
+        return resource_rows[resource]
+    except KeyError as exc:
+        raise ValueError(
+            f"Resource {resource.value!r} has not been seeded yet."
+        ) from exc
+
+
+# ---------------------------------------------------------------------------
+# REFERENCE / MASTER DATA
+# ---------------------------------------------------------------------------
+
+
 def seed_tribes(sess: Session) -> None:
-    existing = {t.name for t in sess.query(db.TribeAttributes).all()}
-    payload = [
+    existing = {row.name: row for row in sess.scalars(select(db.TribeAttributes)).all()}
+    definitions = (
         (db.Tribe.ROMANS, "Build simultaneously"),
         (db.Tribe.TEUTONS, "Fast looting"),
         (db.Tribe.GAULS, "Great defense"),
-    ]
+    )
 
-    rows_to_add = [
-        db.TribeAttributes(name=name, bonus=bonus)
-        for name, bonus in payload
-        if name not in existing
-    ]
+    created = 0
+    updated = 0
 
-    if rows_to_add:
-        sess.add_all(rows_to_add)
-        sess.flush()
+    for tribe, bonus in definitions:
+        row = existing.get(tribe)
+        if row is None:
+            sess.add(db.TribeAttributes(name=tribe, bonus=bonus))
+            created += 1
+        elif row.bonus != bonus:
+            row.bonus = bonus
+            updated += 1
 
-    print("✅ Tribes seeded")
+    sess.flush()
+    print(f"✅ Tribes seeded ({created} created, {updated} updated)")
 
 
 def seed_resources(sess: Session) -> None:
-    existing = {r.name for r in sess.query(db.ResourcesTypes).all()}
-
-    rows_to_add = [
-        db.ResourcesTypes(name=res)
-        for res in db.Resource
-        if res not in existing
+    existing = {row.name for row in sess.scalars(select(db.ResourcesTypes)).all()}
+    rows = [
+        db.ResourcesTypes(name=resource)
+        for resource in db.Resource
+        if resource not in existing
     ]
 
-    if rows_to_add:
-        sess.add_all(rows_to_add)
+    if rows:
+        sess.add_all(rows)
         sess.flush()
 
-    print("✅ Resources seeded")
+    print(f"✅ Resources seeded ({len(rows)} created)")
 
 
-def seed_production(sess: Session) -> None:
-    if sess.query(db.Production).count() > 0:
-        print("ℹ️ Production already present; skipping.")
+def _iter_farm_level_definitions() -> Iterable[dict[str, Any]]:
+    raw_definitions = game_config.get("farm_levels")
+    if not raw_definitions:
+        raise ValueError(
+            "game_config must define 'farm_levels'. Production is now stored "
+            "in FarmLevel together with construction duration and costs."
+        )
+
+    if isinstance(raw_definitions, list):
+        for definition in raw_definitions:
+            if not isinstance(definition, dict):
+                raise ValueError("Every farm_levels list item must be an object.")
+            yield definition
         return
 
-    resources = sess.query(db.ResourcesTypes).all()
-    if not resources:
-        raise ValueError("Resources must be seeded before production.")
+    if isinstance(raw_definitions, dict):
+        for resource_name, levels in raw_definitions.items():
+            if not isinstance(levels, list):
+                raise ValueError(f"farm_levels[{resource_name!r}] must be a list.")
+            for level_definition in levels:
+                if not isinstance(level_definition, dict):
+                    raise ValueError(
+                        f"Every level for {resource_name!r} must be an object."
+                    )
+                yield {"resource": resource_name, **level_definition}
+        return
 
-    rows_to_add: list[db.Production] = []
-    for res in resources:
-        for level in range(0, 6):
-            production_value = 10 * (level + 3)
-            rows_to_add.append(
-                db.Production(
-                    resource_type_id=res.id,
-                    level=level,
-                    production_value=production_value,
+    raise ValueError("game_config['farm_levels'] must be a list or object.")
+
+
+def seed_farm_levels(sess: Session) -> None:
+    """Seed FarmLevel and FarmLevelCost, replacing the former Production seed."""
+    resource_rows = _resource_rows_by_enum(sess)
+    if not resource_rows:
+        raise ValueError("Resources must be seeded before farm levels.")
+
+    existing_levels = {
+        (row.farm_resource_type_id, row.level): row
+        for row in sess.scalars(select(db.FarmLevel)).all()
+    }
+
+    created_levels = 0
+    updated_levels = 0
+    created_costs = 0
+    updated_costs = 0
+    deleted_costs = 0
+    seen_keys: set[tuple[int, int]] = set()
+
+    for definition in _iter_farm_level_definitions():
+        resource_row = _resource_row(resource_rows, definition.get("resource"))
+        level = int(definition["level"])
+        production_per_hour = int(definition["production_per_hour"])
+        construction_time_seconds = int(
+            definition.get(
+                "construction_time_seconds",
+                definition.get("time", 0),
+            )
+        )
+
+        key = (resource_row.id, level)
+        if key in seen_keys:
+            raise ValueError(
+                f"Duplicate farm level definition for "
+                f"{resource_row.name.value} level {level}."
+            )
+        seen_keys.add(key)
+
+        farm_level = existing_levels.get(key)
+        if farm_level is None:
+            farm_level = db.FarmLevel(
+                farm_resource_type_id=resource_row.id,
+                level=level,
+                production_per_hour=production_per_hour,
+                construction_time_seconds=construction_time_seconds,
+            )
+            sess.add(farm_level)
+            sess.flush()
+            existing_levels[key] = farm_level
+            created_levels += 1
+        else:
+            changed = False
+            if farm_level.production_per_hour != production_per_hour:
+                farm_level.production_per_hour = production_per_hour
+                changed = True
+            if farm_level.construction_time_seconds != construction_time_seconds:
+                farm_level.construction_time_seconds = construction_time_seconds
+                changed = True
+            if changed:
+                updated_levels += 1
+
+        configured_costs = definition.get("cost", definition.get("costs", {}))
+        if not isinstance(configured_costs, dict):
+            raise ValueError(
+                f"Cost for {resource_row.name.value} level {level} must be an object."
+            )
+
+        existing_costs = {
+            cost.payment_resource_type_id: cost for cost in farm_level.costs
+        }
+        desired_cost_resource_ids: set[int] = set()
+
+        for raw_payment_resource, raw_amount in configured_costs.items():
+            amount = int(raw_amount)
+            if amount <= 0:
+                raise ValueError(
+                    f"Farm costs must be positive; received {amount} for "
+                    f"{resource_row.name.value} level {level}."
+                )
+
+            payment_resource = _resource_row(
+                resource_rows,
+                raw_payment_resource,
+            )
+            desired_cost_resource_ids.add(payment_resource.id)
+
+            cost = existing_costs.get(payment_resource.id)
+            if cost is None:
+                farm_level.costs.append(
+                    db.FarmLevelCost(
+                        payment_resource_type_id=payment_resource.id,
+                        amount=amount,
+                    )
+                )
+                created_costs += 1
+            elif cost.amount != amount:
+                cost.amount = amount
+                updated_costs += 1
+
+        for payment_resource_id, cost in existing_costs.items():
+            if payment_resource_id not in desired_cost_resource_ids:
+                sess.delete(cost)
+                deleted_costs += 1
+
+    sess.flush()
+    print(
+        "✅ Farm levels seeded "
+        f"({created_levels} levels created, {updated_levels} levels updated, "
+        f"{created_costs} costs created, {updated_costs} costs updated, "
+        f"{deleted_costs} stale costs removed)"
+    )
+
+
+def seed_warehouse_and_granary_capacity(sess: Session) -> None:
+    granary_values = game_config["capacities"]["granary"]
+    warehouse_values = game_config["capacities"]["warehouse"]
+
+    existing_granary = {
+        row.level: row for row in sess.scalars(select(db.GranaryCapacity)).all()
+    }
+    existing_warehouse = {
+        row.level: row for row in sess.scalars(select(db.WarehouseCapacity)).all()
+    }
+
+    granary_created = granary_updated = 0
+    warehouse_created = warehouse_updated = 0
+
+    for raw_level, raw_capacity in granary_values.items():
+        level = int(raw_level)
+        capacity = int(raw_capacity)
+        row = existing_granary.get(level)
+        if row is None:
+            sess.add(db.GranaryCapacity(level=level, capacity=capacity))
+            granary_created += 1
+        elif row.capacity != capacity:
+            row.capacity = capacity
+            granary_updated += 1
+
+    for raw_level, raw_capacity in warehouse_values.items():
+        level = int(raw_level)
+        capacity = int(raw_capacity)
+        row = existing_warehouse.get(level)
+        if row is None:
+            sess.add(db.WarehouseCapacity(level=level, capacity=capacity))
+            warehouse_created += 1
+        elif row.capacity != capacity:
+            row.capacity = capacity
+            warehouse_updated += 1
+
+    sess.flush()
+    print(
+        "✅ Capacities seeded "
+        f"(granary: {granary_created} created/{granary_updated} updated; "
+        f"warehouse: {warehouse_created} created/{warehouse_updated} updated)"
+    )
+
+
+def seed_buildings(sess: Session) -> None:
+    building_definitions = game_config.get("buildings", [])
+    if not building_definitions:
+        print("ℹ️ No buildings found in config; skipping.")
+        return
+
+    resource_rows = _resource_rows_by_enum(sess)
+    if not resource_rows:
+        raise ValueError("Resources must be seeded before buildings.")
+
+    tribe_rows = {
+        row.name: row for row in sess.scalars(select(db.TribeAttributes)).all()
+    }
+
+    existing_types = sess.scalars(select(db.BuildingType)).all()
+    type_by_key: dict[tuple[str, int | None], db.BuildingType] = {
+        (row.name, row.tribe_id): row for row in existing_types
+    }
+
+    configured_types: dict[tuple[str, int | None], db.BuildingType] = {}
+    created_types = 0
+    updated_types = 0
+
+    # Pass 1: types. Prerequisites can then resolve any configured building.
+    for definition in building_definitions:
+        tribe_id: int | None = None
+        raw_tribe = definition.get("tribe")
+        if raw_tribe is not None:
+            tribe = _enum_from_config(db.Tribe, raw_tribe)
+            tribe_row = tribe_rows.get(tribe)
+            if tribe_row is None:
+                raise ValueError(f"Tribe {tribe.value!r} has not been seeded.")
+            tribe_id = tribe_row.id
+
+        key = (definition["name"], tribe_id)
+        if key in configured_types:
+            raise ValueError(f"Duplicate building definition for {key!r}.")
+
+        building_type = type_by_key.get(key)
+        if building_type is None:
+            building_type = db.BuildingType(
+                name=definition["name"],
+                description=definition.get("description"),
+                tribe_id=tribe_id,
+            )
+            sess.add(building_type)
+            sess.flush()
+            type_by_key[key] = building_type
+            created_types += 1
+        else:
+            description = definition.get("description")
+            if building_type.description != description:
+                building_type.description = description
+                updated_types += 1
+
+        configured_types[key] = building_type
+
+    # Pass 2: levels.
+    existing_levels = {
+        (row.building_type_id, row.level): row
+        for row in sess.scalars(select(db.BuildingLevel)).all()
+    }
+    configured_levels: dict[tuple[str, int | None, int], db.BuildingLevel] = {}
+    created_levels = 0
+    updated_levels = 0
+
+    for definition in building_definitions:
+        raw_tribe = definition.get("tribe")
+        tribe_id = None
+        if raw_tribe is not None:
+            tribe = _enum_from_config(db.Tribe, raw_tribe)
+            tribe_id = tribe_rows[tribe].id
+
+        building_type = configured_types[(definition["name"], tribe_id)]
+
+        for level_definition in definition.get("levels", []):
+            level = int(level_definition["level"])
+            construction_time_seconds = int(
+                level_definition.get(
+                    "construction_time_seconds",
+                    level_definition.get("time", 0),
+                )
+            )
+            population_increase = int(
+                level_definition.get(
+                    "population_increase",
+                    level_definition.get("population_required", 0),
                 )
             )
 
-    sess.add_all(rows_to_add)
+            key = (building_type.id, level)
+            building_level = existing_levels.get(key)
+            if building_level is None:
+                building_level = db.BuildingLevel(
+                    building_type_id=building_type.id,
+                    level=level,
+                    construction_time_seconds=construction_time_seconds,
+                    population_increase=population_increase,
+                )
+                sess.add(building_level)
+                sess.flush()
+                existing_levels[key] = building_level
+                created_levels += 1
+            else:
+                changed = False
+                if (
+                    building_level.construction_time_seconds
+                    != construction_time_seconds
+                ):
+                    building_level.construction_time_seconds = construction_time_seconds
+                    changed = True
+                if building_level.population_increase != population_increase:
+                    building_level.population_increase = population_increase
+                    changed = True
+                if changed:
+                    updated_levels += 1
+
+            configured_levels[(definition["name"], tribe_id, level)] = building_level
+
+    # Pass 3: costs and prerequisites.
+    created_costs = updated_costs = deleted_costs = 0
+    created_prerequisites = updated_prerequisites = deleted_prerequisites = 0
+
+    for definition in building_definitions:
+        raw_tribe = definition.get("tribe")
+        tribe_id = None
+        if raw_tribe is not None:
+            tribe = _enum_from_config(db.Tribe, raw_tribe)
+            tribe_id = tribe_rows[tribe].id
+
+        for level_definition in definition.get("levels", []):
+            level = int(level_definition["level"])
+            building_level = configured_levels[(definition["name"], tribe_id, level)]
+
+            existing_costs = {
+                cost.payment_resource_type_id: cost for cost in building_level.costs
+            }
+            desired_cost_ids: set[int] = set()
+
+            configured_costs = level_definition.get(
+                "cost",
+                level_definition.get("costs", {}),
+            )
+            for raw_resource, raw_amount in configured_costs.items():
+                amount = int(raw_amount)
+                if amount <= 0:
+                    raise ValueError(
+                        f"Building costs must be positive; got {amount} for "
+                        f"{definition['name']} level {level}."
+                    )
+
+                resource_row = _resource_row(resource_rows, raw_resource)
+                desired_cost_ids.add(resource_row.id)
+                cost = existing_costs.get(resource_row.id)
+
+                if cost is None:
+                    building_level.costs.append(
+                        db.BuildingLevelCost(
+                            payment_resource_type_id=resource_row.id,
+                            amount=amount,
+                        )
+                    )
+                    created_costs += 1
+                elif cost.amount != amount:
+                    cost.amount = amount
+                    updated_costs += 1
+
+            for resource_id, cost in existing_costs.items():
+                if resource_id not in desired_cost_ids:
+                    sess.delete(cost)
+                    deleted_costs += 1
+
+            existing_prerequisites = {
+                prereq.required_building_type_id: prereq
+                for prereq in building_level.prerequisites
+            }
+            desired_prerequisite_ids: set[int] = set()
+
+            for prerequisite_definition in level_definition.get(
+                "prerequisites",
+                [],
+            ):
+                prerequisite_name = prerequisite_definition["building"]
+                prerequisite_tribe_id = tribe_id
+
+                # Prefer same-tribe prerequisite; fall back to global.
+                prerequisite_type = configured_types.get(
+                    (prerequisite_name, prerequisite_tribe_id)
+                ) or configured_types.get((prerequisite_name, None))
+
+                if prerequisite_type is None:
+                    raise ValueError(
+                        f"Unknown prerequisite building {prerequisite_name!r} "
+                        f"for {definition['name']} level {level}."
+                    )
+
+                required_level = int(prerequisite_definition["level"])
+                desired_prerequisite_ids.add(prerequisite_type.id)
+                prerequisite = existing_prerequisites.get(prerequisite_type.id)
+
+                if prerequisite is None:
+                    building_level.prerequisites.append(
+                        db.BuildingPrerequisite(
+                            required_building_type_id=prerequisite_type.id,
+                            required_level=required_level,
+                        )
+                    )
+                    created_prerequisites += 1
+                elif prerequisite.required_level != required_level:
+                    prerequisite.required_level = required_level
+                    updated_prerequisites += 1
+
+            for required_type_id, prerequisite in existing_prerequisites.items():
+                if required_type_id not in desired_prerequisite_ids:
+                    sess.delete(prerequisite)
+                    deleted_prerequisites += 1
+
     sess.flush()
-    print(f"✅ Production seeded ({len(rows_to_add)} rows)")
+    print(
+        "✅ Buildings seeded "
+        f"({created_types} types created/{updated_types} updated, "
+        f"{created_levels} levels created/{updated_levels} updated, "
+        f"costs {created_costs} created/{updated_costs} updated/"
+        f"{deleted_costs} removed, prerequisites "
+        f"{created_prerequisites} created/{updated_prerequisites} updated/"
+        f"{deleted_prerequisites} removed)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# CORE / WORLD DATA
+# ---------------------------------------------------------------------------
 
 
 def seed_admin_user(sess: Session) -> None:
-    email = "admin@example.com"
-    if sess.query(db.User).filter_by(email=email).first():
-        print("ℹ️ Admin user already exists; skipping.")
+    email = os.getenv("SEED_ADMIN_EMAIL", "admin@example.com")
+    password = os.getenv("SEED_ADMIN_PASSWORD", "admin123")
+
+    existing = sess.scalar(select(db.User).where(db.User.email == email))
+    if existing is not None:
+        print("ℹ️ Development admin already exists; skipping.")
         return
 
-    tribe = (
-        sess.query(db.TribeAttributes).filter_by(name=db.Tribe.ROMANS).first()
+    romans = sess.scalar(
+        select(db.TribeAttributes).where(db.TribeAttributes.name == db.Tribe.ROMANS)
     )
-    if not tribe:
-        raise ValueError("Romans tribe must be seeded first.")
+    if romans is None:
+        raise ValueError("Romans tribe must be seeded before the admin user.")
 
-    hashed = get_password_hash("admin123")
-    admin = db.User(
-        email=email,
-        hashed_password=hashed,
-        is_superuser=True,
-        is_active=True,
-        tribe_id=tribe.id,
+    sess.add(
+        db.User(
+            email=email,
+            hashed_password=get_password_hash(password),
+            is_superuser=True,
+            is_active=True,
+            tribe_id=romans.id,
+        )
     )
-    sess.add(admin)
     sess.flush()
-    print(f"✅ Admin user created ({email} / admin123)")
+
+    if "SEED_ADMIN_PASSWORD" not in os.environ:
+        print(
+            "⚠️ Using the development default admin password. "
+            "Set SEED_ADMIN_PASSWORD outside local development."
+        )
+    print(f"✅ Development admin created ({email})")
 
 
 def seed_map_tiles(sess: Session) -> None:
-    if sess.query(db.MapTile).count() > 0:
-        print("ℹ️ Map tiles already exist; skipping.")
+    existing_tile_count = sess.query(db.MapTile).count()
+    if existing_tile_count > 0:
+        print(f"ℹ️ Map already contains {existing_tile_count} tiles; skipping.")
         return
 
-    cfg = game_config["map_tile"]
-    size = cfg["size"]
-    constructible_ratio = cfg["constructible_ratio"]
+    config = game_config["map_tile"]
+    size = int(config["size"])
+    constructible_ratio = float(config["constructible_ratio"])
+    rng = random.Random(config.get("random_seed", 1))
 
-    print(f"🗺️ Seeding map tiles: size={size} => {size * size} total tiles")
+    if size <= 0:
+        raise ValueError("map_tile.size must be positive.")
+    if not 0 <= constructible_ratio <= 1:
+        raise ValueError("map_tile.constructible_ratio must be between 0 and 1.")
 
-    layout_templates: list[list[tuple[Any, int]]] = []
-    layout_weights: list[int | float] = []
+    resource_rows = _resource_rows_by_enum(sess)
+    if not resource_rows:
+        raise ValueError("Resources must be seeded before map tiles.")
 
-    for layout_cfg in cfg["layouts"]:
-        template = [
-            (db.Resource[res], amt) for res, amt in layout_cfg["layout"]
-        ]
+    layout_templates: list[list[tuple[db.Resource, int]]] = []
+    layout_weights: list[float] = []
+
+    for layout_config in config["layouts"]:
+        template: list[tuple[db.Resource, int]] = []
+        for raw_resource, raw_amount in layout_config["layout"]:
+            resource = _enum_from_config(db.Resource, raw_resource)
+            amount = int(raw_amount)
+            if amount <= 0:
+                raise ValueError("Map layout resource amounts must be positive.")
+            template.append((resource, amount))
+
         layout_templates.append(template)
-        layout_weights.append(layout_cfg["weight"])
+        layout_weights.append(float(layout_config["weight"]))
 
-    resource_types = {r.name: r for r in sess.query(db.ResourcesTypes).all()}
-    if not resource_types:
-        raise ValueError("Resources must be seeded before tiles.")
+    if not layout_templates:
+        raise ValueError("At least one map layout template is required.")
+
+    print(f"🗺️ Seeding map: {size} × {size} = {size * size} tiles")
 
     tiles: list[db.MapTile] = []
-    chosen_layouts: list[list[tuple[Any, int]]] = []
+    chosen_layouts: list[list[tuple[db.Resource, int]]] = []
     constructible_tiles = 0
 
-    prep_start = time.perf_counter()
     for x in range(size):
         if x % 10 == 0 or x == size - 1:
             print(f"⏳ Preparing map row {x + 1}/{size}")
 
         for y in range(size):
-            is_constructible = random.random() < constructible_ratio
-            if is_constructible:
-                constructible_tiles += 1
+            is_constructible = rng.random() < constructible_ratio
+            constructible_tiles += int(is_constructible)
 
-            tile = db.MapTile(x=x, y=y, is_constructible=is_constructible)
-            tiles.append(tile)
+            tiles.append(
+                db.MapTile(
+                    x=x,
+                    y=y,
+                    is_constructible=is_constructible,
+                )
+            )
+            chosen_layouts.append(
+                rng.choices(
+                    layout_templates,
+                    weights=layout_weights,
+                    k=1,
+                )[0]
+            )
 
-            chosen_layout = random.choices(
-                layout_templates,
-                weights=layout_weights,
-                k=1,
-            )[0]
-            chosen_layouts.append(chosen_layout)
-
-    prep_elapsed = time.perf_counter() - prep_start
-    print(f"✅ Prepared {len(tiles)} tiles in {prep_elapsed:.2f}s")
-
-    insert_tiles_start = time.perf_counter()
     sess.add_all(tiles)
-    sess.flush()  # assign all tile IDs in one go
-    insert_tiles_elapsed = time.perf_counter() - insert_tiles_start
-    print(f"✅ Inserted tile rows in {insert_tiles_elapsed:.2f}s")
+    sess.flush()
 
     layout_rows: list[dict[str, int]] = []
-    for tile, chosen_layout in zip(tiles, chosen_layouts):
-        for res_name, amount in chosen_layout:
+    for tile, chosen_layout in zip(tiles, chosen_layouts, strict=True):
+        for resource, amount in chosen_layout:
             layout_rows.append(
                 {
                     "map_tile_id": tile.id,
-                    "resource_type_id": resource_types[res_name].id,
+                    "resource_type_id": resource_rows[resource].id,
                     "amount": amount,
                 }
             )
 
-    insert_layouts_start = time.perf_counter()
     if layout_rows:
         sess.execute(insert(db.MapTileResourceLayout), layout_rows)
         sess.flush()
-    insert_layouts_elapsed = time.perf_counter() - insert_layouts_start
 
     print(
-        "✅ Map tiles and layouts seeded "
+        "✅ Map seeded "
         f"({len(tiles)} tiles, {constructible_tiles} constructible, "
         f"{len(layout_rows)} layout rows)"
     )
-    print(f"⏱️ Layout insert: {insert_layouts_elapsed:.2f}s")
 
 
-def seed_warehouse_and_granary_capacity(sess: Session) -> None:
-    existing_g = {c.level for c in sess.query(db.GranaryCapacity).all()}
-    existing_w = {c.level for c in sess.query(db.WarehouseCapacity).all()}
-
-    granary_capacity_values = game_config["capacities"]["granary"]
-    warehouse_capacity_values = game_config["capacities"]["warehouse"]
-
-    granary_rows = []
-    warehouse_rows = []
-
-    for level_str, cap in granary_capacity_values.items():
-        level = int(level_str)
-        if level not in existing_g:
-            granary_rows.append(db.GranaryCapacity(level=level, capacity=cap))
-
-    for level_str, cap in warehouse_capacity_values.items():
-        level = int(level_str)
-        if level not in existing_w:
-            warehouse_rows.append(
-                db.WarehouseCapacity(level=level, capacity=cap)
-            )
-
-    if granary_rows:
-        sess.add_all(granary_rows)
-    if warehouse_rows:
-        sess.add_all(warehouse_rows)
-
-    if granary_rows or warehouse_rows:
-        sess.flush()
-
-    print(
-        "✅ Granary & Warehouse capacities seeded "
-        f"({len(granary_rows)} granary, {len(warehouse_rows)} warehouse)"
-    )
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
 
 
-def seed_buildings(sess: Session) -> None:
-    if sess.query(db.BuildingType).count() > 0:
-        print("ℹ️ Buildings already exist; skipping.")
-        return
-
-    building_defs = game_config.get("buildings", [])
-    if not building_defs:
-        print("ℹ️ No buildings found in config; skipping.")
-        return
-
-    resource_types = {
-        r.name.name: r for r in sess.query(db.ResourcesTypes).all()
-    }
-    if not resource_types:
-        raise ValueError("Resources must be seeded before buildings.")
-
-    # Pass 1: create all building types, flush once
-    building_type_by_name: dict[str, db.BuildingType] = {}
-    building_type_rows: list[db.BuildingType] = []
-
-    for b in building_defs:
-        btype = db.BuildingType(
-            name=b["name"],
-            description=b.get("description"),
-        )
-        building_type_rows.append(btype)
-        building_type_by_name[b["name"]] = btype
-
-    sess.add_all(building_type_rows)
-    sess.flush()
-
-    # Pass 2: create all levels, flush once
-    level_rows: list[db.BuildingLevel] = []
-    level_index: dict[tuple[str, int], db.BuildingLevel] = {}
-
-    for b in building_defs:
-        btype = building_type_by_name[b["name"]]
-
-        for level_def in b.get("levels", []):
-            lvl = db.BuildingLevel(
-                building_type_id=btype.id,
-                level=level_def["level"],
-                construction_time=level_def["time"],
-                population_required=level_def.get("population_required", 0),
-            )
-            level_rows.append(lvl)
-            level_index[(b["name"], level_def["level"])] = lvl
-
-    sess.add_all(level_rows)
-    sess.flush()
-
-    # Pass 3: create costs and prerequisites
-    cost_rows: list[db.BuildingUpgradeResource] = []
-    prereq_rows: list[db.BuildingPrerequisite] = []
-
-    for b in building_defs:
-        for level_def in b.get("levels", []):
-            lvl = level_index[(b["name"], level_def["level"])]
-
-            for res_name, amount in level_def.get("cost", {}).items():
-                if res_name not in resource_types:
-                    raise ValueError(
-                        f"Unknown resource: {res_name}. "
-                        f"Available resources: {list(resource_types.keys())}"
-                    )
-
-                cost_rows.append(
-                    db.BuildingUpgradeResource(
-                        building_level_id=lvl.id,
-                        resource_type_id=resource_types[res_name].id,
-                        amount=amount,
-                    )
-                )
-
-            for prereq in level_def.get("prerequisites", []):
-                prereq_name = prereq["building"]
-                required_level = prereq["level"]
-
-                prereq_building = building_type_by_name.get(prereq_name)
-                if not prereq_building:
-                    raise ValueError(
-                        f"Unknown prerequisite building: {prereq_name}"
-                    )
-
-                prereq_rows.append(
-                    db.BuildingPrerequisite(
-                        building_level_id=lvl.id,
-                        required_building_type_id=prereq_building.id,
-                        required_level=required_level,
-                    )
-                )
-
-    if cost_rows:
-        sess.add_all(cost_rows)
-    if prereq_rows:
-        sess.add_all(prereq_rows)
-
-    if cost_rows or prereq_rows:
-        sess.flush()
-
-    print(
-        "✅ Seeded buildings "
-        f"({len(building_type_rows)} types, {len(level_rows)} levels, "
-        f"{len(cost_rows)} costs, {len(prereq_rows)} prerequisites)"
-    )
+def print_seed_policy() -> None:
+    print("📚 Seed table policy")
+    for category, tables in SEED_POLICY.items():
+        table_list = ", ".join(tables) if tables else "none"
+        print(f"   {category}: {table_list}")
 
 
 def main() -> None:
     sess = SessionLocal()
     print("🔍 DB URL:", sess.get_bind().engine.url)
+    print_seed_policy()
 
     try:
-        # Phase 1: core data
-        timed_step("seed_tribes", seed_tribes, sess)
+        # Phase 1: reference/master game rules.
         timed_step("seed_resources", seed_resources, sess)
-        timed_step("seed_production", seed_production, sess)
-        timed_step("seed_admin_user", seed_admin_user, sess)
-        commit_phase(sess, "core")
-
-        # Phase 2: heavy map data
-        timed_step("seed_map_tiles", seed_map_tiles, sess)
-        commit_phase(sess, "map")
-
-        # Phase 3: remaining config data
+        timed_step("seed_tribes", seed_tribes, sess)
+        timed_step("seed_farm_levels", seed_farm_levels, sess)
         timed_step(
             "seed_warehouse_and_granary_capacity",
             seed_warehouse_and_granary_capacity,
             sess,
         )
         timed_step("seed_buildings", seed_buildings, sess)
-        commit_phase(sess, "final")
+        commit_phase(sess, "reference-master")
+
+        # Phase 2: lightweight core development data.
+        timed_step("seed_admin_user", seed_admin_user, sess)
+        commit_phase(sess, "core-development")
+
+        # Phase 3: heavy world data.
+        timed_step("seed_map_tiles", seed_map_tiles, sess)
+        commit_phase(sess, "world-map")
 
         print("🌱 Seeding completed")
+        print(
+            "ℹ️ Current-state, runtime-transaction, and ledger tables were "
+            "intentionally not globally seeded."
+        )
 
-    except Exception as e:
+    except Exception as exc:
         sess.rollback()
-        print(f"❌ Seeding failed: {e}")
+        print(f"❌ Seeding failed: {exc}")
         raise
     finally:
         sess.close()

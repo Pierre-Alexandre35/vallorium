@@ -11,9 +11,7 @@ def get_user_by_email(db_sess: Session, email: str) -> Optional[db.User]:
     return db_sess.query(db.User).filter(db.User.email == email).first()
 
 
-def list_users(
-    db_sess: Session, skip: int = 0, limit: int = 100
-) -> Sequence[db.User]:
+def list_users(db_sess: Session, skip: int = 0, limit: int = 100) -> Sequence[db.User]:
     return db_sess.query(db.User).offset(skip).limit(limit).all()
 
 
