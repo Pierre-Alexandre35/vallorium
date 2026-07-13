@@ -1,0 +1,141 @@
+.mapPanel:global(.MuiPaper-root) {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  padding: 8px;
+  background: var(--village-panel-background);
+}
+
+.world {
+  position: relative;
+  width: 100%;
+  max-width: var(--village-map-max-width);
+  aspect-ratio: 1 / 1;
+  margin-inline: auto;
+  border: 1px solid var(--village-map-border);
+  border-radius: 50%;
+  background: var(--village-map-background);
+  box-shadow: var(--village-map-shadow);
+}
+
+.world::before {
+  position: absolute;
+  inset: 21%;
+  content: "";
+  border: 7px double var(--village-road-border);
+  border-radius: 50%;
+  background-color: var(--village-road-background);
+  box-shadow: var(--village-map-inner-shadow);
+}
+
+.world::after {
+  position: absolute;
+  inset: 32%;
+  content: "";
+  opacity: 0.65;
+  border-radius: 50%;
+  background: var(--village-fields-background);
+}
+
+.plot {
+  position: absolute;
+  z-index: 3;
+  left: var(--plot-left);
+  top: var(--plot-top);
+  display: grid;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  place-items: center;
+  cursor: pointer;
+  transition: transform var(--game-motion-quick), filter var(--game-motion-quick);
+  border: none;
+  border-radius: 50%;
+  background-color: transparent;
+}
+
+.plot:hover {
+  transform: translate(-50%, -50%) scale(1.1);
+  filter: brightness(1.05);
+}
+
+.plot:focus-visible {
+  outline: 3px solid var(--plot-focus-color);
+  outline-offset: 3px;
+}
+
+.levelBadge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  color: var(--village-level-color);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  border: 2px solid var(--plot-level-border);
+  border-radius: 50%;
+  background-color: var(--village-level-background);
+  box-shadow: var(--village-level-shadow);
+}
+
+.villageCenter {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 49%;
+  display: grid;
+  width: 115px;
+  height: 115px;
+  transform: translate(-50%, -50%);
+  place-items: center;
+  color: var(--village-center-color);
+  text-align: center;
+  border: 8px double var(--village-center-border);
+  border-radius: 50%;
+  background: var(--village-center-background);
+  box-shadow: var(--village-center-shadow);
+}
+
+.selectionPanel {
+  padding: 12px;
+  border: 1px solid var(--village-selection-border);
+  border-radius: 42px;
+  background-color: var(--village-selection-background);
+  box-shadow: var(--village-selection-shadow);
+  backdrop-filter: blur(8px);
+}
+
+@media (min-width: 600px) {
+  .mapPanel:global(.MuiPaper-root) {
+    padding: 16px;
+  }
+
+  .plot {
+    width: 60px;
+    height: 60px;
+  }
+
+  .villageCenter {
+    width: 148px;
+    height: 148px;
+  }
+}
+
+@media (min-width: 900px) {
+  .plot {
+    width: 66px;
+    height: 66px;
+  }
+
+  .selectionPanel {
+    position: absolute;
+    right: 22px;
+    bottom: 18px;
+    left: 22px;
+  }
+}

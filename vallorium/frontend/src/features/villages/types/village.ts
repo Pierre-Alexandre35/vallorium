@@ -1,3 +1,5 @@
+export type ResourceKey = "wood" | "clay" | "iron" | "crop";
+
 export type MapTileOut = {
   id: number;
   x?: number;
@@ -41,4 +43,5 @@ export type VillageRow = {
   coordinates: string;
   production: Record<string, number>;
   resources: Record<string, number>;
+  capacities: Record<string, number>;
 };

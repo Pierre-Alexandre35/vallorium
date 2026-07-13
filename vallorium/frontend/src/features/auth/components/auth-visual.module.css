@@ -1,0 +1,90 @@
+.root {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  color: var(--auth-common-white);
+  background-color: var(--auth-fallback-background);
+  background-image: var(--auth-background);
+  isolation: isolate;
+}
+
+.root::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  opacity: 0.035;
+  background-image: var(--auth-noise);
+}
+
+.realmMap {
+  position: absolute;
+  right: -50px;
+  bottom: -48px;
+  width: 330px;
+  height: 220px;
+  transform: rotate(-5deg);
+  border: 10px solid var(--auth-map-border);
+  border-radius: 50%;
+  background: var(--auth-map-background);
+  box-shadow: var(--auth-map-shadow);
+}
+
+.field {
+  position: absolute;
+  left: var(--field-left);
+  top: var(--field-top);
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  color: var(--auth-common-white);
+  border: 3px solid var(--auth-field-border);
+  border-radius: 50%;
+  background-color: var(--field-color);
+  box-shadow: var(--auth-field-shadow);
+}
+
+.field svg {
+  font-size: 23px;
+}
+
+.villageCenter {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  width: 96px;
+  height: 96px;
+  transform: translate(-50%, -50%);
+  place-items: center;
+  color: var(--auth-center-color);
+  border: 8px double var(--auth-center-border);
+  border-radius: 50%;
+  background-color: var(--auth-center-background);
+  box-shadow: var(--auth-center-shadow);
+}
+
+@media (min-width: 900px) {
+  .realmMap {
+    right: -30px;
+    bottom: -46px;
+    width: 440px;
+    height: 290px;
+  }
+
+  .field {
+    width: 62px;
+    height: 62px;
+  }
+
+  .field svg {
+    font-size: 29px;
+  }
+
+  .villageCenter {
+    width: 124px;
+    height: 124px;
+  }
+}

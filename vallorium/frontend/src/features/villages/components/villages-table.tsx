@@ -10,6 +10,7 @@ import {
   Stack,
 } from "@mui/material";
 import type { VillageRow } from "../types/village";
+import { gameTokens } from "@/theme";
 
 type Props = {
   villages: VillageRow[];
@@ -23,7 +24,7 @@ export function VillagesTable({ villages }: Props) {
   return (
     <Paper variant="outlined" sx={{ overflow: "hidden" }}>
       <Stack spacing={0.5} sx={{ p: 3, pb: 2 }}>
-        <Typography variant="h6" fontWeight={700}>
+        <Typography variant="h6" fontWeight={gameTokens.typography.weight.medium}>
           Your villages
         </Typography>
         <Typography variant="body2" color="text.secondary">

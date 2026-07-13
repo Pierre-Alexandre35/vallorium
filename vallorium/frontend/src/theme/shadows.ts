@@ -1,0 +1,17 @@
+export const gameShadows = {
+  button: "0 8px 18px rgba(35, 72, 45, .18)",
+  buttonHover: "0 10px 22px rgba(35, 72, 45, .25)",
+  card: "0 14px 34px rgba(93, 77, 49, .08)",
+  authPanel: "0 28px 80px rgba(75, 60, 31, .14)",
+  logo: "0 7px 18px rgba(31, 67, 40, .22)",
+  selectedVillage: "0 10px 20px rgba(35, 72, 45, .18)",
+  resourceIcon: "0 4px 10px rgba(58, 48, 28, .18)",
+  authMap: "0 34px 80px rgba(0,0,0,.33), inset 0 0 0 2px rgba(255,255,255,.14)",
+  authField: "0 7px 14px rgba(0,0,0,.25)",
+  authVillageCenter: "0 13px 25px rgba(0,0,0,.28)",
+  villageMap: "inset 0 0 0 10px rgba(255,255,255,.18), 0 20px 45px rgba(73, 67, 43, .12)",
+  villageMapInner: "inset 0 0 0 12px rgba(255,255,255,.16)",
+  villageLevel: "0 3px 7px rgba(0,0,0,.18)",
+  villageCenter: "0 14px 24px rgba(73, 54, 24, .28)",
+  villageSelection: "0 10px 24px rgba(67, 55, 31, .1)",
+} as const;
