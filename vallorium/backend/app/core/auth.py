@@ -1,45 +1,66 @@
-import jwt
-from fastapi import Depends, HTTPException, status
-from jwt import PyJWTError
+from fastapi import (
+    Cookie,
+    Depends,
+    HTTPException,
+    status,
+)
 
+import app.db.models as models
 import app.db.session as session
-from app.domains.auth.schemas import TokenData
+
+from app.core import security
+from app.core.sessions import (
+    SESSION_COOKIE_NAME,
+    get_session_user_id,
+)
 from app.domains.users.schemas import UserCreate
 import app.domains.users.service as user_service
-from app.core import security
-import app.db.models as models
 
 
 async def get_current_user(
-    db=Depends(session.get_db), token: str = Depends(security.oauth2_scheme)
-):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(
-            token, security.SECRET_KEY, algorithms=[security.ALGORITHM]
+    db=Depends(session.get_db),
+    session_id: str | None = Cookie(
+        default=None,
+        alias=SESSION_COOKIE_NAME,
+    ),
+) -> models.User:
+    if session_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
         )
-        email: str = payload.get("sub")
-        if email is None:
-            raise credentials_exception
-        permissions: str = payload.get("permissions")
-        token_data = TokenData(email=email, permissions=permissions)
-    except PyJWTError:
-        raise credentials_exception
-    user = user_service.get_user_by_email(db, token_data.email)
+
+    user_id = await get_session_user_id(session_id)
+
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired or invalid",
+        )
+
+    user = user_service.get_user_raw(
+        db,
+        user_id,
+    )
+
     if user is None:
-        raise credentials_exception
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+        )
+
     return user
 
 
 async def get_current_active_user(
     current_user: models.User = Depends(get_current_user),
-):
+) -> models.User:
     if not current_user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Inactive user",
+        )
+
     return current_user
 
 
@@ -48,25 +69,51 @@ async def get_current_active_superuser(
 ) -> models.User:
     if not current_user.is_superuser:
         raise HTTPException(
-            status_code=403, detail="The user doesn't have enough privileges"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges",
         )
+
     return current_user
 
 
-def authenticate_user(db, email: str, password: str):
-    user = user_service.get_user_by_email_raw(db, email)
-    if not user:
-        return False
-    if not security.verify_password(password, user.hashed_password):
-        return False
+def authenticate_user(
+    db,
+    email: str,
+    password: str,
+) -> models.User | None:
+    user = user_service.get_user_by_email_raw(
+        db,
+        email,
+    )
+
+    if user is None:
+        return None
+
+    if not security.verify_password(
+        password,
+        user.hashed_password,
+    ):
+        return None
+
     return user
 
 
-def sign_up_new_user(db, email: str, password: str, tribe_id: int):
-    user = user_service.get_user_by_email(db, email)
-    if user:
-        return False  # User already exists
-    new_user = user_service.create_user(
+def sign_up_new_user(
+    db,
+    *,
+    email: str,
+    password: str,
+    tribe_id: int,
+) -> models.User | None:
+    existing_user = user_service.get_user_by_email_raw(
+        db,
+        email,
+    )
+
+    if existing_user is not None:
+        return None
+
+    user_service.create_user(
         db,
         UserCreate(
             email=email,
@@ -76,4 +123,8 @@ def sign_up_new_user(db, email: str, password: str, tribe_id: int):
             is_superuser=False,
         ),
     )
-    return new_user
+
+    return user_service.get_user_by_email_raw(
+        db,
+        email,
+    )
