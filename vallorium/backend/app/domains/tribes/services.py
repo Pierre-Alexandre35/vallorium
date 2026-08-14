@@ -4,6 +4,10 @@ from fastapi import HTTPException, status
 import app.domains.tribes.repository as tribe_repo
 
 
+def list_tribes(db_sess: Session):
+    return tribe_repo.get_all(db_sess)
+
+
 def get_tribe_by_id(db_sess: Session, tribe_id: int):
     tribe = tribe_repo.get_by_id(db_sess, tribe_id)
     if not tribe:

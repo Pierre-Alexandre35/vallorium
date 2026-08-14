@@ -76,6 +76,7 @@ SEED_POLICY: dict[str, tuple[str, ...]] = {
     "REFERENCE_MASTER": (
         "resources_types",
         "tribe_attributes",
+        "tribe_advantage",
         "farm_level",
         "farm_level_cost",
         "building_type",
@@ -167,27 +168,164 @@ def _resource_row(
 
 
 def seed_tribes(sess: Session) -> None:
-    existing = {row.name: row for row in sess.scalars(select(db.TribeAttributes)).all()}
-    definitions = (
-        (db.Tribe.ROMANS, "Build simultaneously"),
-        (db.Tribe.TEUTONS, "Fast looting"),
-        (db.Tribe.GAULS, "Great defense"),
-    )
+    definitions = {
+        db.Tribe.ROMANS: {
+            "bonus": "Build simultaneously",
+            "playstyle": "Balanced",
+            "description": (
+                "Versatile empire builders with strong infrastructure "
+                "and a balanced military."
+            ),
+            "advantages": [
+                {
+                    "code": "construction",
+                    "title": "Efficient builders",
+                    "description": "Excellent at developing settlements quickly.",
+                },
+                {
+                    "code": "versatility",
+                    "title": "Versatile army",
+                    "description": "Flexible offensive and defensive options.",
+                },
+                {
+                    "code": "economy",
+                    "title": "Strong economy",
+                    "description": "Reliable infrastructure for long-term growth.",
+                },
+            ],
+        },
+
+        db.Tribe.TEUTONS: {
+            "bonus": "Fast looting",
+            "playstyle": "Aggressive",
+            "description": (
+                "Aggressive warriors built around raiding, expansion "
+                "and economical armies."
+            ),
+            "advantages": [
+                {
+                    "code": "raiding",
+                    "title": "Powerful raiders",
+                    "description": "Well suited to frequent offensive raids.",
+                },
+                {
+                    "code": "infantry",
+                    "title": "Affordable infantry",
+                    "description": "Can field large early armies efficiently.",
+                },
+                {
+                    "code": "pressure",
+                    "title": "Early pressure",
+                    "description": "Strong options for aggressive expansion.",
+                },
+            ],
+        },
+
+        db.Tribe.GAULS: {
+            "bonus": "Great defense",
+            "playstyle": "Defensive",
+            "description": (
+                "Mobile defenders with strong protection and flexible "
+                "expansion options."
+            ),
+            "advantages": [
+                {
+                    "code": "defense",
+                    "title": "Strong defenders",
+                    "description": "Excellent defensive military options.",
+                },
+                {
+                    "code": "mobility",
+                    "title": "High mobility",
+                    "description": "Fast units make movement and support easier.",
+                },
+                {
+                    "code": "expansion",
+                    "title": "Flexible expansion",
+                    "description": "Well suited to safer territorial growth.",
+                },
+            ],
+        },
+    }
+
+    existing = {
+        row.name: row
+        for row in sess.scalars(select(db.TribeAttributes)).all()
+    }
 
     created = 0
     updated = 0
 
-    for tribe, bonus in definitions:
-        row = existing.get(tribe)
-        if row is None:
-            sess.add(db.TribeAttributes(name=tribe, bonus=bonus))
+    for tribe_name, definition in definitions.items():
+        tribe = existing.get(tribe_name)
+
+        if tribe is None:
+            tribe = db.TribeAttributes(
+                name=tribe_name,
+                bonus=definition["bonus"],
+                description=definition["description"],
+                playstyle=definition["playstyle"],
+            )
+            sess.add(tribe)
+            sess.flush()
+
+            existing[tribe_name] = tribe
             created += 1
-        elif row.bonus != bonus:
-            row.bonus = bonus
-            updated += 1
+
+        else:
+            changed = False
+
+            for field in ("bonus", "description", "playstyle"):
+                new_value = definition[field]
+
+                if getattr(tribe, field) != new_value:
+                    setattr(tribe, field, new_value)
+                    changed = True
+
+            if changed:
+                updated += 1
+
+        existing_advantages = {
+            advantage.code: advantage
+            for advantage in tribe.advantages
+        }
+
+        desired_codes: set[str] = set()
+
+        for position, advantage_definition in enumerate(
+            definition["advantages"]
+        ):
+            code = advantage_definition["code"]
+            desired_codes.add(code)
+
+            advantage = existing_advantages.get(code)
+
+            if advantage is None:
+                tribe.advantages.append(
+                    db.TribeAdvantage(
+                        code=code,
+                        title=advantage_definition["title"],
+                        description=advantage_definition["description"],
+                        position=position,
+                    )
+                )
+                continue
+
+            advantage.title = advantage_definition["title"]
+            advantage.description = advantage_definition["description"]
+            advantage.position = position
+
+        # Remove advantages that were removed from seed configuration.
+        for code, advantage in existing_advantages.items():
+            if code not in desired_codes:
+                sess.delete(advantage)
 
     sess.flush()
-    print(f"✅ Tribes seeded ({created} created, {updated} updated)")
+
+    print(
+        f"✅ Tribes seeded "
+        f"({created} created, {updated} updated)"
+    )
 
 
 def seed_resources(sess: Session) -> None:
