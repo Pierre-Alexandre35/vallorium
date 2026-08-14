@@ -1,3 +1,4 @@
+import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -8,7 +9,7 @@ class Settings(BaseSettings):
     debug: bool = False
 
     model_config = SettingsConfigDict(
-        env_file="./app/.env.local",
+        env_file=os.getenv("DATABASE_URL"),
         env_file_encoding="utf-8",
     )
 

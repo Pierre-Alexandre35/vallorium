@@ -1,85 +1,141 @@
-from fastapi.security import OAuth2PasswordRequestForm
-from fastapi import APIRouter, Depends, HTTPException, status, Form
-from datetime import timedelta
+from fastapi import (
+    APIRouter,
+    Cookie,
+    Depends,
+    HTTPException,
+    Response,
+    status,
+)
 
+from app.core.auth import (
+    authenticate_user,
+    get_current_active_user,
+    sign_up_new_user,
+)
+from app.core.sessions import (
+    SESSION_COOKIE_NAME,
+    clear_session_cookie,
+    create_session,
+    delete_session,
+    set_session_cookie,
+)
 from app.db.session import get_db
-from app.core import security
-from app.core.auth import authenticate_user, sign_up_new_user
+from app.domains.auth.schemas import (
+    AuthResponse,
+    LoginRequest,
+    SignupRequest,
+)
 
-auth_router = r = APIRouter()
+auth_router = r = APIRouter(
+    prefix="/auth",
+    tags=["auth"],
+)
 
 
-@r.post("/token")
+@r.post(
+    "/login",
+    response_model=AuthResponse,
+)
 async def login(
-    db=Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()
+    data: LoginRequest,
+    response: Response,
+    db=Depends(get_db),
 ):
-    user = authenticate_user(db, form_data.username, form_data.password)
-    if not user:
+    user = authenticate_user(
+        db,
+        data.email,
+        data.password,
+    )
+
+    if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail="Incorrect email or password",
         )
 
-    access_token_expires = timedelta(
-        minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES
-    )
-    if user.is_superuser:
-        permissions = "admin"
-    else:
-        permissions = "user"
-    access_token = security.create_access_token(
-        data={"sub": user.email, "permissions": permissions},
-        expires_delta=access_token_expires,
+    session_id = await create_session(user.id)
+
+    set_session_cookie(
+        response,
+        session_id,
     )
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "is_superuser": user.is_superuser,
+        }
+    }
 
 
-class ExtendedOAuth2PasswordRequestForm(OAuth2PasswordRequestForm):
-    def __init__(
-        self,
-        username: str = Form(...),
-        password: str = Form(...),
-        tribe_id: int = Form(...),  # ✅ Correctly pass `tribe_id`
-        scope: str = Form(""),  # ✅ Explicitly define `scope`
-    ):
-        super().__init__(
-            username=username, password=password, scope=scope
-        )  # ✅ Pass scope correctly
-        self.tribe_id = tribe_id  # ✅ Store `tribe_id`
-
-
-@r.post("/signup")
+@r.post(
+    "/signup",
+    response_model=AuthResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def signup(
-    db=Depends(get_db), form_data: ExtendedOAuth2PasswordRequestForm = Depends()
+    data: SignupRequest,
+    response: Response,
+    db=Depends(get_db),
 ):
-    """
-    Register a new user with tribe selection
-    """
-    print("Processing signup request")  # ✅ Debugging print
-    print("Received tribe_id:", form_data.tribe_id)
-
     user = sign_up_new_user(
         db,
-        form_data.username,  # ✅ OAuth2 expects "username", not "email"
-        form_data.password,
-        form_data.tribe_id,  # ✅ Ensure `tribe_id` is passed
+        email=data.email,
+        password=data.password,
+        tribe_id=data.tribe_id,
     )
 
-    if not user:
+    if user is None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Account already exists",
         )
 
-    # ✅ Generate access token
-    access_token_expires = timedelta(
-        minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES
-    )
-    access_token = security.create_access_token(
-        data={"sub": user.email, "permissions": "user"},
-        expires_delta=access_token_expires,
+    session_id = await create_session(user.id)
+
+    set_session_cookie(
+        response,
+        session_id,
     )
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "is_superuser": user.is_superuser,
+        }
+    }
+
+
+@r.post(
+    "/logout",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def logout(
+    response: Response,
+    session_id: str | None = Cookie(
+        default=None,
+        alias=SESSION_COOKIE_NAME,
+    ),
+):
+    if session_id is not None:
+        await delete_session(session_id)
+
+    clear_session_cookie(response)
+
+
+@r.get(
+    "/me",
+    response_model=AuthResponse,
+)
+async def me(
+    current_user=Depends(get_current_active_user),
+):
+    return {
+        "user": {
+            "id": current_user.id,
+            "email": current_user.email,
+            "is_superuser": current_user.is_superuser,
+        }
+    }

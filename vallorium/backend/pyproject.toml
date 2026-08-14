@@ -30,6 +30,7 @@ sqlalchemy-utils = "^0.42.1"
 python-dateutil = "^2.9.0.post0"
 pyyaml = "^6.0.3"
 faker = "^40.23.0"
+email-validator = "^2.3.0"
 
 [tool.poetry.group.dev.dependencies]
 ipython = "^9.15.0"

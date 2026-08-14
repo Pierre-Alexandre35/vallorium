@@ -14,9 +14,19 @@ def list_users(db: Session, skip=0, limit=100) -> List[UserOut]:
     return [UserOut.model_validate(u) for u in rows]
 
 
-def get_user(db: Session, user_id: int) -> Optional[UserOut]:
+def get_user(
+    db: Session,
+    user_id: int,
+) -> Optional[UserOut]:
     row = user_repo.get_user(db, user_id)
     return UserOut.model_validate(row) if row else None
+
+
+def get_user_raw(
+    db: Session,
+    user_id: int,
+) -> Optional[User]:
+    return user_repo.get_user(db, user_id)
 
 
 def get_user_by_email(db: Session, email: str) -> Optional[UserOut]:
@@ -30,9 +40,7 @@ def get_user_by_email_raw(db: Session, email: str) -> Optional[User]:
 
 def create_user(db: Session, payload: UserCreate) -> UserOut:
     if user_repo.get_user_by_email(db, payload.email):
-        raise HTTPException(
-            status.HTTP_409_CONFLICT, detail="User already exists"
-        )
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="User already exists")
 
     hashed = get_password_hash(payload.password)
     u = user_repo.insert_user(

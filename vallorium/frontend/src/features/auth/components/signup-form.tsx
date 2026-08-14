@@ -1,52 +1,75 @@
+import { useEffect, useState } from "react";
+
 import AlternateEmailRoundedIcon from "@mui/icons-material/AlternateEmailRounded";
 import LockOutlineRoundedIcon from "@mui/icons-material/LockOutlineRounded";
-import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
+
 import {
   Alert,
   Box,
   Button,
   CircularProgress,
   InputAdornment,
+  MenuItem,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
+
 import { Link as RouterLink } from "react-router-dom";
+
+import { getTribes, type TribeOption } from "@/features/auth/api/get-tribes";
 
 import { useSignupForm } from "@/features/auth/hooks/use-signup-form";
 import { gameTokens } from "@/theme";
 
 export function SignupForm() {
-  const { values, error, isSubmitting, handleSubmit, updateField } = useSignupForm();
+  const { values, error, isSubmitting, handleSubmit, updateField } =
+    useSignupForm();
+
+  const [tribes, setTribes] = useState<TribeOption[]>([]);
+  const [isLoadingTribes, setIsLoadingTribes] = useState(true);
+  const [tribesError, setTribesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadTribes() {
+      try {
+        const data = await getTribes();
+
+        if (active) {
+          setTribes(data);
+        }
+      } catch {
+        if (active) {
+          setTribesError("Unable to load races.");
+        }
+      } finally {
+        if (active) {
+          setIsLoadingTribes(false);
+        }
+      }
+    }
+
+    loadTribes();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
-    <Box component="form" onSubmit={handleSubmit} noValidate>
-      <Stack spacing={2}>
-        <Box sx={{ mb: 0.5 }}>
-          <Typography variant="h4">Found your first village.</Typography>
-          <Typography color="text.secondary" sx={{ mt: 1 }}>
-            Create your account and begin with a protected settlement.
-          </Typography>
-        </Box>
+    <Box sx={{ mb: 0.5 }}>
+      <Stack component="form" onSubmit={handleSubmit} spacing={2}>
+        <Typography variant="h4">Found your first village.</Typography>
+
+        <Typography color="text.secondary">
+          Create your account and begin with a protected settlement.
+        </Typography>
 
         {error ? <Alert severity="error">{error}</Alert> : null}
 
-        <TextField
-          label="Chief name"
-          value={values.username}
-          onChange={(event) => updateField("username", event.target.value)}
-          autoComplete="nickname"
-          required
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <PersonOutlineRoundedIcon fontSize="small" />
-                </InputAdornment>
-              ),
-            },
-          }}
-        />
+        {tribesError ? <Alert severity="error">{tribesError}</Alert> : null}
 
         <TextField
           label="Email address"
@@ -89,7 +112,9 @@ export function SignupForm() {
           label="Confirm password"
           type="password"
           value={values.confirmPassword}
-          onChange={(event) => updateField("confirmPassword", event.target.value)}
+          onChange={(event) =>
+            updateField("confirmPassword", event.target.value)
+          }
           autoComplete="new-password"
           required
           slotProps={{
@@ -103,8 +128,37 @@ export function SignupForm() {
           }}
         />
 
-        <Button type="submit" variant="contained" size="large" disabled={isSubmitting}>
-          {isSubmitting ? <CircularProgress size={23} color="inherit" /> : "Create my village"}
+        <TextField
+          select
+          label="Race"
+          value={values.tribeId}
+          onChange={(event) =>
+            updateField("tribeId", Number(event.target.value))
+          }
+          required
+          disabled={isLoadingTribes || tribes.length === 0}
+          helperText={
+            isLoadingTribes ? "Loading races..." : "Choose your starting race"
+          }
+        >
+          {tribes.map((tribe) => (
+            <MenuItem key={tribe.id} value={tribe.id}>
+              {tribe.name}
+            </MenuItem>
+          ))}
+        </TextField>
+
+        <Button
+          type="submit"
+          variant="contained"
+          size="large"
+          disabled={isSubmitting || isLoadingTribes || !values.tribeId}
+        >
+          {isSubmitting ? (
+            <CircularProgress size={23} color="inherit" />
+          ) : (
+            "Create my village"
+          )}
         </Button>
 
         <Typography variant="body2" color="text.secondary" textAlign="center">
@@ -114,7 +168,9 @@ export function SignupForm() {
             to="/login"
             color="primary.main"
             fontWeight={gameTokens.typography.weight.bold}
-            sx={{ textDecoration: "none" }}
+            sx={{
+              textDecoration: "none",
+            }}
           >
             Sign in
           </Typography>

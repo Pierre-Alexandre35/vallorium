@@ -4,13 +4,23 @@ export interface LoginFormValues {
 }
 
 export interface RegisterFormValues {
-  username: string;
   email: string;
   password: string;
   confirmPassword: string;
+  tribeId: number;
 }
 
-export interface TokenResponse {
-  access_token: string;
-  token_type: string;
+export interface AuthUser {
+  id: number;
+  email: string;
+  is_superuser: boolean;
+}
+
+export interface AuthResponse {
+  user: AuthUser;
+}
+
+export interface TribeOption {
+  id: number;
+  name: string;
 }
