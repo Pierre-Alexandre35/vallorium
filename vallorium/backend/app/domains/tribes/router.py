@@ -1,33 +1,22 @@
-import typing as t
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+
 from app.db.session import get_db
-from app.db.models import TribeAttributes
-from app.domains.tribes.schemas import TribeOut, TribeBase
-from app.core.auth import get_current_active_superuser
+from app.domains.tribes.schemas import TribeOut
+import app.domains.tribes.services as tribe_service
+
 
 tribes_router = APIRouter()
 
 
-@tribes_router.get("/tribes", response_model=t.List[TribeOut])
-async def list_tribes(db=Depends(get_db)):
-    """
-    Get all available tribes
-    """
-    return db.query(TribeAttributes).all()
-
-
-@tribes_router.post(
+@tribes_router.get(
     "/tribes",
-    response_model=TribeOut,
-    dependencies=[Depends(get_current_active_superuser)],
+    response_model=list[TribeOut],
 )
-async def create_tribe(tribe: TribeBase, db=Depends(get_db)):
+def list_tribes(
+    db: Session = Depends(get_db),
+) -> list[TribeOut]:
     """
-    Admin-only: Create a new tribe
+    Get all available tribes.
     """
-    db_tribe = TribeAttributes(name=tribe.name)
-    db.add(db_tribe)
-    db.commit()
-    db.refresh(db_tribe)
-    return db_tribe
+    return tribe_service.list_tribes(db)
