@@ -129,6 +129,10 @@ docker compose run --rm backend \
 When working directly inside the backend environment:
 
 ```bash
+cd vallorium/backend
+```
+
+```bash
 poetry run alembic revision \
   --autogenerate \
   -m "add tribe metadata and advantages"

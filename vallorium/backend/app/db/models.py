@@ -4,11 +4,12 @@ TABLE CATEGORIES
 ----------------
 REFERENCE / MASTER DATA
     Stable game catalog and balance configuration. These rows describe what
-    resources, tribes, farm levels, building levels, costs, prerequisites, and
-    capacities exist. They do not describe a particular player's action.
+    resources, tribes, farm levels, building levels, costs, prerequisites,
+    capacities, and map tile templates exist. They do not describe a particular
+    player's action.
 
 CORE / WORLD ENTITIES
-    Users, map tiles, map layouts, and villages.
+    Users, map tiles, and villages.
 
 CURRENT STATE
     The latest completed state of a village: farm levels, building levels, and
@@ -465,6 +466,66 @@ class WarehouseCapacity(Base):
     )
 
 
+class MapTileType(Base):
+    """Reference template describing one map-tile resource-field layout."""
+
+    __tablename__ = "map_tile_type"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    starter_eligible: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
+
+    farm_slots = relationship(
+        "MapTileTypeFarmSlot",
+        back_populates="tile_type",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="MapTileTypeFarmSlot.slot_number",
+    )
+    map_tiles = relationship(
+        "MapTile",
+        back_populates="tile_type",
+    )
+
+
+class MapTileTypeFarmSlot(Base):
+    """One fixed resource-field slot within a map-tile type."""
+
+    __tablename__ = "map_tile_type_farm_slot"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    map_tile_type_id: Mapped[int] = mapped_column(
+        ForeignKey("map_tile_type.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    slot_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    resource_type_id: Mapped[int] = mapped_column(
+        ForeignKey("resources_types.id"),
+        nullable=False,
+    )
+
+    tile_type = relationship("MapTileType", back_populates="farm_slots")
+    resource_type = relationship("ResourcesTypes")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "map_tile_type_id",
+            "slot_number",
+            name="uq_map_tile_type_farm_slot",
+        ),
+        CheckConstraint(
+            "slot_number BETWEEN 1 AND 18",
+            name="ck_map_tile_type_farm_slot_range",
+        ),
+    )
+
+
 # ---------------------------------------------------------------------------
 # TABLE CATEGORY: CORE / WORLD ENTITIES
 # ---------------------------------------------------------------------------
@@ -505,43 +566,16 @@ class MapTile(Base):
     x: Mapped[int] = mapped_column(Integer, nullable=False)
     y: Mapped[int] = mapped_column(Integer, nullable=False)
     is_constructible: Mapped[bool] = mapped_column(Boolean, nullable=False)
-
-    village = relationship("Village", back_populates="tile", uselist=False)
-    resource_layouts = relationship(
-        "MapTileResourceLayout",
-        back_populates="map_tile",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
+    map_tile_type_id: Mapped[int] = mapped_column(
+        ForeignKey("map_tile_type.id"),
+        nullable=False,
+        index=True,
     )
+
+    tile_type = relationship("MapTileType", back_populates="map_tiles")
+    village = relationship("Village", back_populates="tile", uselist=False)
 
     __table_args__ = (UniqueConstraint("x", "y", name="uq_tile_coordinates"),)
-
-
-class MapTileResourceLayout(Base):
-    __tablename__ = "map_tile_resource_layout"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    map_tile_id: Mapped[int] = mapped_column(
-        ForeignKey("map_tile.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    resource_type_id: Mapped[int] = mapped_column(
-        ForeignKey("resources_types.id"),
-        nullable=False,
-    )
-    amount: Mapped[int] = mapped_column(Integer, nullable=False)
-
-    map_tile = relationship("MapTile", back_populates="resource_layouts")
-    resource_type = relationship("ResourcesTypes")
-
-    __table_args__ = (
-        UniqueConstraint(
-            "map_tile_id",
-            "resource_type_id",
-            name="uq_tile_resource",
-        ),
-        CheckConstraint("amount > 0", name="ck_tile_resource_amount_positive"),
-    )
 
 
 class Village(Base):
@@ -1034,13 +1068,14 @@ TABLE_CLASSIFICATION: dict[str, frozenset[str]] = {
             "building_prerequisite",
             "granary_capacity",
             "warehouse_capacity",
+            "map_tile_type",
+            "map_tile_type_farm_slot",
         }
     ),
     "CORE_WORLD": frozenset(
         {
             "user",
             "map_tile",
-            "map_tile_resource_layout",
             "village",
         }
     ),

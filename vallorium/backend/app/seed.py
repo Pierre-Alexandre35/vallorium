@@ -6,11 +6,12 @@ REFERENCE_MASTER
     Seeded and updated from ``game_config``:
     resources_types, tribe_attributes, farm_level, farm_level_cost,
     building_type, building_level, building_level_cost,
-    building_prerequisite, granary_capacity, warehouse_capacity.
+    building_prerequisite, granary_capacity, warehouse_capacity,
+    map_tile_type, map_tile_type_farm_slot.
 
 CORE_WORLD
     Seeded here only where appropriate:
-    optional development admin user, map_tile, map_tile_resource_layout.
+    optional development admin user and map_tile.
 
 CURRENT_STATE
     NOT globally seeded. ``village_farm_plots``, ``village_building``, and
@@ -54,6 +55,28 @@ The grouped form is also accepted::
         "IRON": [...],
         "CROP": [...]
     }
+
+Expected map tile configuration
+-------------------------------
+Preferred fixed-slot form::
+
+    "map_tile": {
+        "layouts": [
+            {
+                "code": "standard_4455",
+                "name": "Standard 4-4-5-5",
+                "starter_eligible": True,
+                "weight": 1,
+                "slots": [
+                    "WOOD", "CROP", "IRON", "CLAY",
+                    ... 18 resource entries total ...
+                ]
+            }
+        ]
+    }
+
+The former aggregate ``layout`` form is still accepted and expanded into
+fixed slots in the configured resource order.
 """
 
 from __future__ import annotations
@@ -64,7 +87,7 @@ import time
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
-from sqlalchemy import insert, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 import app.db.models as db
@@ -85,11 +108,12 @@ SEED_POLICY: dict[str, tuple[str, ...]] = {
         "building_prerequisite",
         "granary_capacity",
         "warehouse_capacity",
+        "map_tile_type",
+        "map_tile_type_farm_slot",
     ),
     "CORE_WORLD": (
         "user (development admin only)",
         "map_tile",
-        "map_tile_resource_layout",
     ),
     "CURRENT_STATE": (),
     "RUNTIME_TRANSACTION": (),
@@ -758,6 +782,181 @@ def seed_buildings(sess: Session) -> None:
     )
 
 
+def _map_tile_type_definitions() -> list[dict[str, Any]]:
+    config = game_config["map_tile"]
+    raw_layouts = config.get("layouts", [])
+    if not raw_layouts:
+        raise ValueError("At least one map layout template is required.")
+
+    definitions: list[dict[str, Any]] = []
+    seen_codes: set[str] = set()
+
+    for layout_config in raw_layouts:
+        raw_slots = layout_config.get("slots")
+        slots: list[db.Resource] = []
+
+        if raw_slots is not None:
+            if not isinstance(raw_slots, list):
+                raise ValueError("Map layout 'slots' must be a list.")
+
+            slots = [
+                _enum_from_config(db.Resource, raw_resource)
+                for raw_resource in raw_slots
+            ]
+        else:
+            raw_layout = layout_config.get("layout")
+            if not isinstance(raw_layout, list):
+                raise ValueError(
+                    "Each map layout must define either 'slots' or 'layout'."
+                )
+
+            for raw_resource, raw_amount in raw_layout:
+                resource = _enum_from_config(db.Resource, raw_resource)
+                amount = int(raw_amount)
+                if amount <= 0:
+                    raise ValueError("Map layout resource amounts must be positive.")
+                slots.extend([resource] * amount)
+
+        if len(slots) != 18:
+            raise ValueError(
+                "Every map tile type must define exactly 18 resource-field slots; "
+                f"received {len(slots)}."
+            )
+
+        counts = {
+            resource: sum(slot == resource for slot in slots)
+            for resource in db.Resource
+        }
+        default_code = "layout_" + "_".join(
+            str(counts[resource]) for resource in db.Resource
+        )
+        default_name = "-".join(
+            str(counts[resource]) for resource in db.Resource
+        )
+
+        code = str(layout_config.get("code", default_code)).strip()
+        name = str(layout_config.get("name", default_name)).strip()
+        if not code:
+            raise ValueError("Map tile type code must not be empty.")
+        if not name:
+            raise ValueError("Map tile type name must not be empty.")
+        if code in seen_codes:
+            raise ValueError(
+                f"Duplicate map tile type code {code!r}. "
+                "Provide explicit unique codes when layouts share resource counts."
+            )
+        seen_codes.add(code)
+
+        starter_default = counts == {
+            db.Resource.WOOD: 4,
+            db.Resource.CLAY: 4,
+            db.Resource.IRON: 5,
+            db.Resource.CROP: 5,
+        }
+        starter_eligible = bool(
+            layout_config.get("starter_eligible", starter_default)
+        )
+        weight = float(layout_config.get("weight", 1))
+        if weight < 0:
+            raise ValueError("Map layout weights must be non-negative.")
+
+        definitions.append(
+            {
+                "code": code,
+                "name": name,
+                "starter_eligible": starter_eligible,
+                "weight": weight,
+                "slots": slots,
+            }
+        )
+
+    if not any(definition["starter_eligible"] for definition in definitions):
+        raise ValueError(
+            "At least one map tile type must be eligible for starting villages."
+        )
+
+    if not any(definition["weight"] > 0 for definition in definitions):
+        raise ValueError("At least one map tile type must have a positive weight.")
+
+    return definitions
+
+
+def seed_map_tile_types(sess: Session) -> None:
+    resource_rows = _resource_rows_by_enum(sess)
+    if not resource_rows:
+        raise ValueError("Resources must be seeded before map tile types.")
+
+    definitions = _map_tile_type_definitions()
+    existing_types = {
+        row.code: row for row in sess.scalars(select(db.MapTileType)).all()
+    }
+
+    created_types = 0
+    updated_types = 0
+    created_slots = 0
+    updated_slots = 0
+    deleted_slots = 0
+
+    for definition in definitions:
+        tile_type = existing_types.get(definition["code"])
+
+        if tile_type is None:
+            tile_type = db.MapTileType(
+                code=definition["code"],
+                name=definition["name"],
+                starter_eligible=definition["starter_eligible"],
+            )
+            sess.add(tile_type)
+            sess.flush()
+            existing_types[tile_type.code] = tile_type
+            created_types += 1
+        else:
+            changed = False
+            if tile_type.name != definition["name"]:
+                tile_type.name = definition["name"]
+                changed = True
+            if tile_type.starter_eligible != definition["starter_eligible"]:
+                tile_type.starter_eligible = definition["starter_eligible"]
+                changed = True
+            if changed:
+                updated_types += 1
+
+        existing_slots = {
+            slot.slot_number: slot for slot in tile_type.farm_slots
+        }
+        desired_slot_numbers: set[int] = set()
+
+        for slot_number, resource in enumerate(definition["slots"], start=1):
+            desired_slot_numbers.add(slot_number)
+            resource_row = resource_rows[resource]
+            slot = existing_slots.get(slot_number)
+
+            if slot is None:
+                tile_type.farm_slots.append(
+                    db.MapTileTypeFarmSlot(
+                        slot_number=slot_number,
+                        resource_type_id=resource_row.id,
+                    )
+                )
+                created_slots += 1
+            elif slot.resource_type_id != resource_row.id:
+                slot.resource_type_id = resource_row.id
+                updated_slots += 1
+
+        for slot_number, slot in existing_slots.items():
+            if slot_number not in desired_slot_numbers:
+                sess.delete(slot)
+                deleted_slots += 1
+
+    sess.flush()
+    print(
+        "✅ Map tile types seeded "
+        f"({created_types} types created/{updated_types} updated, "
+        f"{created_slots} slots created/{updated_slots} updated/"
+        f"{deleted_slots} removed)"
+    )
+
+
 # ---------------------------------------------------------------------------
 # CORE / WORLD DATA
 # ---------------------------------------------------------------------------
@@ -813,32 +1012,27 @@ def seed_map_tiles(sess: Session) -> None:
     if not 0 <= constructible_ratio <= 1:
         raise ValueError("map_tile.constructible_ratio must be between 0 and 1.")
 
-    resource_rows = _resource_rows_by_enum(sess)
-    if not resource_rows:
-        raise ValueError("Resources must be seeded before map tiles.")
+    definitions = _map_tile_type_definitions()
+    tile_types_by_code = {
+        row.code: row for row in sess.scalars(select(db.MapTileType)).all()
+    }
 
-    layout_templates: list[list[tuple[db.Resource, int]]] = []
-    layout_weights: list[float] = []
+    tile_types: list[db.MapTileType] = []
+    tile_type_weights: list[float] = []
 
-    for layout_config in config["layouts"]:
-        template: list[tuple[db.Resource, int]] = []
-        for raw_resource, raw_amount in layout_config["layout"]:
-            resource = _enum_from_config(db.Resource, raw_resource)
-            amount = int(raw_amount)
-            if amount <= 0:
-                raise ValueError("Map layout resource amounts must be positive.")
-            template.append((resource, amount))
+    for definition in definitions:
+        tile_type = tile_types_by_code.get(definition["code"])
+        if tile_type is None:
+            raise ValueError(
+                f"Map tile type {definition['code']!r} has not been seeded yet."
+            )
 
-        layout_templates.append(template)
-        layout_weights.append(float(layout_config["weight"]))
-
-    if not layout_templates:
-        raise ValueError("At least one map layout template is required.")
+        tile_types.append(tile_type)
+        tile_type_weights.append(definition["weight"])
 
     print(f"🗺️ Seeding map: {size} × {size} = {size * size} tiles")
 
     tiles: list[db.MapTile] = []
-    chosen_layouts: list[list[tuple[db.Resource, int]]] = []
     constructible_tiles = 0
 
     for x in range(size):
@@ -848,44 +1042,27 @@ def seed_map_tiles(sess: Session) -> None:
         for y in range(size):
             is_constructible = rng.random() < constructible_ratio
             constructible_tiles += int(is_constructible)
+            tile_type = rng.choices(
+                tile_types,
+                weights=tile_type_weights,
+                k=1,
+            )[0]
 
             tiles.append(
                 db.MapTile(
                     x=x,
                     y=y,
                     is_constructible=is_constructible,
+                    map_tile_type_id=tile_type.id,
                 )
-            )
-            chosen_layouts.append(
-                rng.choices(
-                    layout_templates,
-                    weights=layout_weights,
-                    k=1,
-                )[0]
             )
 
     sess.add_all(tiles)
     sess.flush()
 
-    layout_rows: list[dict[str, int]] = []
-    for tile, chosen_layout in zip(tiles, chosen_layouts, strict=True):
-        for resource, amount in chosen_layout:
-            layout_rows.append(
-                {
-                    "map_tile_id": tile.id,
-                    "resource_type_id": resource_rows[resource].id,
-                    "amount": amount,
-                }
-            )
-
-    if layout_rows:
-        sess.execute(insert(db.MapTileResourceLayout), layout_rows)
-        sess.flush()
-
     print(
         "✅ Map seeded "
-        f"({len(tiles)} tiles, {constructible_tiles} constructible, "
-        f"{len(layout_rows)} layout rows)"
+        f"({len(tiles)} tiles, {constructible_tiles} constructible)"
     )
 
 
@@ -909,6 +1086,7 @@ def main() -> None:
     try:
         # Phase 1: reference/master game rules.
         timed_step("seed_resources", seed_resources, sess)
+        timed_step("seed_map_tile_types", seed_map_tile_types, sess)
         timed_step("seed_tribes", seed_tribes, sess)
         timed_step("seed_farm_levels", seed_farm_levels, sess)
         timed_step(
