@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { login } from "@/features/auth/api/login";
@@ -50,6 +50,7 @@ export function useSignupForm() {
   const [values, setValues] = useState<RegisterFormValues>(INITIAL_VALUES);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const idempotencyKey = useRef(crypto.randomUUID());
 
   function validateAccountStep(): boolean {
     setError(null);
@@ -90,11 +91,14 @@ export function useSignupForm() {
     const email = values.email.trim();
 
     try {
-      await register({
-        email,
-        password: values.password,
-        tribeId: values.tribeId,
-      });
+      await register(
+        {
+          email,
+          password: values.password,
+          tribeId: values.tribeId,
+        },
+        idempotencyKey.current,
+      );
 
       await login({
         email,
@@ -119,6 +123,8 @@ export function useSignupForm() {
       ...current,
       [field]: value,
     }));
+
+    idempotencyKey.current = crypto.randomUUID();
   }
 
   return {
