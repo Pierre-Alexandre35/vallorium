@@ -16,23 +16,30 @@ def tile_is_occupied(db_sess: Session, map_tile_id: int) -> bool:
     )
 
 
-def get_tile_layouts(
-    db_sess: Session, map_tile_id: int
-) -> Sequence[db.MapTileResourceLayout]:
+def get_tile_for_update(
+    db_sess: Session,
+    map_tile_id: int,
+) -> Optional[db.MapTile]:
     return (
-        db_sess.query(db.MapTileResourceLayout)
-        .filter(db.MapTileResourceLayout.map_tile_id == map_tile_id)
-        .all()
+        db_sess.query(db.MapTile)
+        .options(
+            selectinload(db.MapTile.tile_type).selectinload(
+                db.MapTileType.farm_slots
+            ),
+        )
+        .filter(db.MapTile.id == map_tile_id)
+        .with_for_update(of=db.MapTile)
+        .one_or_none()
     )
 
 
 def insert_village(
-    db_sess: Session, *, name: str, map_tile_id: int, population: int, owner_id: int
+    db_sess: Session, *, name: str, map_tile_id: int, owner_id: int
 ) -> db.Village:
     v = db.Village(
         name=name,
         map_tile_id=map_tile_id,
-        population=population,
+        population=0,
         owner_id=owner_id,
     )
     db_sess.add(v)
@@ -43,21 +50,20 @@ def insert_village(
 def insert_farm_plots(
     db_sess: Session,
     village_id: int,
-    layouts: Sequence[db.MapTileResourceLayout],
+    farm_slots: Sequence[db.MapTileTypeFarmSlot],
 ) -> None:
-    farm_no = 1
     rows = []
-    for lay in layouts:
-        for _ in range(lay.amount):
-            rows.append(
-                db.VillageFarmPlot(
-                    village_id=village_id,
-                    resource_type_id=lay.resource_type_id,
-                    farm_number=farm_no,
-                    level=0,
-                )
+
+    for slot in farm_slots:
+        rows.append(
+            db.VillageFarmPlot(
+                village_id=village_id,
+                resource_type_id=slot.resource_type_id,
+                farm_number=slot.slot_number,
+                level=0,
             )
-            farm_no += 1
+        )
+
     if rows:
         db_sess.bulk_save_objects(rows)
 
@@ -226,8 +232,6 @@ def get_owned_farm_plot_for_update(
             db.Village.id == db.VillageFarmPlot.village_id,
         )
         .options(
-            # Load these relationships in separate SELECT queries.
-            # This prevents LEFT OUTER JOINs in the locking query.
             selectinload(db.VillageFarmPlot.village),
             selectinload(db.VillageFarmPlot.resource_type),
         )
@@ -236,7 +240,6 @@ def get_owned_farm_plot_for_update(
             db.VillageFarmPlot.village_id == village_id,
             db.Village.owner_id == owner_id,
         )
-        # Lock only the farm plot table.
         .with_for_update(of=db.VillageFarmPlot)
         .one_or_none()
     )
