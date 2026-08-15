@@ -15,45 +15,106 @@ import app.domains.resources.repository as resource_repo
 import app.domains.resources.service as resource_service
 
 
-from app.db.models import Village, UpgradeStatus
+from app.db.models import Village, UpgradeStatus, Resource, MapTile
 
 
-def create_village(db: Session, village: VillageCreate, owner_id: int) -> Village:
-    if village_repo.tile_is_occupied(db, village.map_tile_id):
+def initialize_village(
+    db: Session,
+    *,
+    name: str,
+    tile: MapTile,
+    owner_id: int,
+) -> Village:
+    farm_slots = tile.tile_type.farm_slots
+
+    if len(farm_slots) != 18:
         raise HTTPException(
-            status.HTTP_409_CONFLICT,
-            detail=f"Map tile {village.map_tile_id} is already occupied.",
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Map tile type {tile.map_tile_type_id} does not define 18 farm slots.",
         )
-
-    layouts = village_repo.get_tile_layouts(db, village.map_tile_id)
-    if not layouts:
-        raise HTTPException(
-            status.HTTP_404_NOT_FOUND,
-            detail=f"No resource layout found for map tile {village.map_tile_id}.",
-        )
-
-    now = datetime.utcnow()
 
     v = village_repo.insert_village(
         db,
-        name=village.name,
-        map_tile_id=village.map_tile_id,
-        population=village.population,
+        name=name,
+        map_tile_id=tile.id,
         owner_id=owner_id,
     )
 
-    village_repo.insert_farm_plots(db, v.id, layouts)
+    village_repo.insert_farm_plots(
+        db,
+        v.id,
+        farm_slots,
+    )
 
-    starter_pack = {
-        1: 50,  # WOOD
-        2: 75,  # CLAY
-        3: 90,  # IRON
-        4: 40,  # CROP
-    }
-    resource_repo.insert_initial_storage(db, v.id, starter_pack, now)
+    resource_type_ids = resource_repo.get_resource_type_ids(db)
 
-    db.commit()
-    return village_repo.get_village_with_tile(db, v.id)
+    try:
+        starter_pack = {
+            resource_type_ids[Resource.WOOD]: 50,
+            resource_type_ids[Resource.CLAY]: 75,
+            resource_type_ids[Resource.IRON]: 90,
+            resource_type_ids[Resource.CROP]: 40,
+        }
+    except KeyError as exc:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Resource types are not fully configured.",
+        ) from exc
+
+    resource_repo.insert_initial_storage(
+        db,
+        v.id,
+        starter_pack,
+        datetime.now(timezone.utc),
+    )
+
+    db.flush()
+    return v
+
+
+def create_village(db: Session, village: VillageCreate, owner_id: int) -> Village:
+    try:
+        tile = village_repo.get_tile_for_update(
+            db,
+            village.map_tile_id,
+        )
+
+        if tile is None:
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND,
+                detail=f"Map tile {village.map_tile_id} does not exist.",
+            )
+
+        if not tile.is_constructible:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                detail=f"Map tile {village.map_tile_id} is not constructible.",
+            )
+
+        if village_repo.tile_is_occupied(db, village.map_tile_id):
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                detail=f"Map tile {village.map_tile_id} is already occupied.",
+            )
+
+        v = initialize_village(
+            db,
+            name=village.name,
+            tile=tile,
+            owner_id=owner_id,
+        )
+
+        db.commit()
+
+        return village_repo.get_village_with_tile(db, v.id)
+
+    except HTTPException:
+        db.rollback()
+        raise
+
+    except Exception:
+        db.rollback()
+        raise
 
 
 def get_user_villages(db: Session, owner_id: int) -> Optional[List[Village]]:
@@ -145,7 +206,6 @@ def upgrade_farm_level(
     owner_id: int,
 ) -> FarmUpgradeOut:
     try:
-        # Verify ownership and lock the farm in one query.
         farm_plot = village_repo.get_owned_farm_plot_for_update(
             db_sess=db,
             village_id=village_id,
@@ -159,7 +219,6 @@ def upgrade_farm_level(
                 detail="Farm plot not found or unauthorized.",
             )
 
-        # Prevent another active upgrade on this farm.
         if village_repo.has_active_farm_upgrade(
             db_sess=db,
             farm_plot_id=farm_plot.id,
@@ -171,7 +230,6 @@ def upgrade_farm_level(
 
         target_level = farm_plot.level + 1
 
-        # Load reference data for the target level.
         level_definition = village_repo.get_farm_level_with_costs(
             db_sess=db,
             farm_resource_type_id=farm_plot.resource_type_id,
@@ -207,8 +265,6 @@ def upgrade_farm_level(
 
         now = datetime.now(timezone.utc)
 
-        # Settle current production, lock storage rows,
-        # validate balances and deduct the costs.
         resource_service.spend_resources(
             db_sess=db,
             village_id=farm_plot.village_id,

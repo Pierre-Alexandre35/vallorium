@@ -69,3 +69,17 @@ def load_storages_for_update(
         .with_for_update()
         .all()
     )
+
+
+def get_resource_type_ids(
+    db_sess: Session,
+) -> dict[db.Resource, int]:
+    rows = db_sess.query(
+        db.ResourcesTypes.name,
+        db.ResourcesTypes.id,
+    ).all()
+
+    return {
+        resource_name: resource_type_id
+        for resource_name, resource_type_id in rows
+    }

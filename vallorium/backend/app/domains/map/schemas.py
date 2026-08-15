@@ -1,11 +1,17 @@
-from typing import List
 from app.common.schemas import AppBaseModel
 from app.domains.resources.schemas import ResourceTypeOut
 
 
-class TileResourceOut(AppBaseModel):
+class MapTileFarmSlotOut(AppBaseModel):
+    slot_number: int
     resource_type: ResourceTypeOut
-    amount: int
+
+
+class MapTileTypeOut(AppBaseModel):
+    id: int
+    code: str
+    name: str
+    farm_slots: list[MapTileFarmSlotOut]
 
 
 class MapTileOut(AppBaseModel):
@@ -13,4 +19,4 @@ class MapTileOut(AppBaseModel):
     x: int
     y: int
     is_constructible: bool
-    resource_layouts: List[TileResourceOut] = []
+    tile_type: MapTileTypeOut

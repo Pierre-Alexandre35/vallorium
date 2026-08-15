@@ -7,7 +7,6 @@ from app.domains.resources.schemas import ResourceProduction, ResourceBalance
 class VillageBase(AppBaseModel):
     name: str
     map_tile_id: int
-    population: int
 
 
 class VillageCreate(VillageBase):
