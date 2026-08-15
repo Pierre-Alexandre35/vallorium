@@ -1,9 +1,8 @@
+import type { TribeOption } from "@/features/auth/types/auth";
 import { api } from "@/lib/api";
 
-import type { TribeOption } from "@/features/auth/types/auth";
-
-export async function getTribes() {
-  const { data } = await api.get<TribeOption[]>("/tribes");
+export async function getTribes(signal?: AbortSignal): Promise<TribeOption[]> {
+  const { data } = await api.get<TribeOption[]>("/tribes", { signal });
 
   return data;
 }
