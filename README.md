@@ -12,9 +12,9 @@
 
 Each player selects a tribe — **Romans, Gauls, or Teutons** — and starts with a single village.
 
-A village contains 16 resource fields producing four resources:
+A village contains 18 resource fields producing four resources:
 
-* 🌾 Corn
+* 🌾 Crop
 * ⛓️ Iron
 * 🪵 Wood
 * 🧱 Clay
@@ -110,7 +110,7 @@ From the `vallorium/` directory:
 
 ```bash
 docker compose run --rm backend \
-  alembic revision --autogenerate -m "add tribe metadata"
+  alembic revision --autogenerate -m "describe the schema change"
 ```
 
 Review the generated migration file before applying it.
@@ -132,10 +132,12 @@ When working directly inside the backend environment:
 cd vallorium/backend
 ```
 
+Generate a migration:
+
 ```bash
 poetry run alembic revision \
   --autogenerate \
-  -m "add tribe metadata and advantages"
+  -m "describe the schema change"
 ```
 
 Apply all pending migrations:
@@ -263,24 +265,40 @@ Make sure all CI checks pass before merging the Pull Request.
 
 ## 3. Merge into `main`
 
-Once the release PR has been merged:
+Merge the release Pull Request **before creating the release tag**.
+
+After the Pull Request has been merged, refresh the remote repository state:
 
 ```bash
-git checkout main
-git pull origin main
+git fetch origin
 ```
 
-The local `main` branch should now contain the release commit.
+Verify the latest commit on `main`:
+
+```bash
+git log -1 --oneline origin/main
+```
+
+The release tag must point to this commit.
 
 ---
 
 ## 4. Create the Git tag
 
-Create a version tag from `main`:
+Create an annotated version tag directly from `origin/main`:
 
 ```bash
-git tag v0.5.0
+git tag -a v0.5.0 origin/main -m "Release v0.5.0"
 ```
+
+Verify that the tag and `origin/main` point to the same commit:
+
+```bash
+git rev-list -n 1 v0.5.0
+git rev-parse origin/main
+```
+
+Both commands should return the same commit hash.
 
 Push the tag to GitHub:
 
@@ -288,17 +306,13 @@ Push the tag to GitHub:
 git push origin v0.5.0
 ```
 
-You can verify the tag with:
-
-```bash
-git show v0.5.0 --no-patch --oneline
-```
+This approach avoids accidentally tagging the current local branch and does not require checking out `main`.
 
 ---
 
 ## 5. Generate GitHub Release Notes
 
-Vallorium uses the GitHub CLI to generate release notes automatically from the changes included in the release.
+Vallorium uses the GitHub CLI to generate release notes automatically from the Pull Requests and changes included between releases.
 
 Authenticate the GitHub CLI if necessary:
 
@@ -306,47 +320,73 @@ Authenticate the GitHub CLI if necessary:
 gh auth login
 ```
 
-Then create the GitHub release:
+Create the GitHub release and explicitly specify the previous release tag:
 
 ```bash
 gh release create v0.5.0 \
   --generate-notes \
-  --title "v0.5.0"
+  --notes-start-tag v0.4.0 \
+  --title "v0.5.0" \
+  --verify-tag
 ```
 
-For example, the `v0.4.0` release was created with:
+For the next release, update both versions accordingly.
+
+For example:
 
 ```bash
-gh release create v0.4.0 \
+gh release create v0.6.0 \
   --generate-notes \
-  --title "v0.4.0"
+  --notes-start-tag v0.5.0 \
+  --title "v0.6.0" \
+  --verify-tag
 ```
 
-The complete release workflow is therefore:
+GitHub-generated release notes summarize the merged Pull Requests, contributors, and full changelog between the two release tags.
+
+---
+
+## Complete Release Workflow
+
+After the `dev → main` Pull Request has been merged:
 
 ```bash
-# After the dev → main PR has been merged
+# Refresh the remote repository state
+git fetch origin
 
-git checkout main
-git pull origin main
+# Verify the release commit on main
+git log -1 --oneline origin/main
 
-git tag v0.5.0
+# Create the release tag directly on origin/main
+git tag -a v0.5.0 origin/main -m "Release v0.5.0"
+
+# Verify the tag points to the same commit as origin/main
+git rev-list -n 1 v0.5.0
+git rev-parse origin/main
+
+# Push the tag
 git push origin v0.5.0
 
+# Create the GitHub release
 gh release create v0.5.0 \
   --generate-notes \
-  --title "v0.5.0"
+  --notes-start-tag v0.4.0 \
+  --title "v0.5.0" \
+  --verify-tag
 ```
 
 > Do not create the release tag before the `dev → main` Pull Request has been merged.
-> The version tag should point to the release commit on `main`.
+>
+> Always create the release tag from `origin/main`, not from the current local branch.
+>
+> Before pushing the tag, verify that the tag and `origin/main` resolve to the same commit.
 
 ---
 
 # 🛠️ Technologies
 
 * **Backend:** FastAPI
-* **Frontend:** Vue 3
+* **Frontend:** React, Vite, TypeScript, MUI, PixiJS
 * **Database:** PostgreSQL
 * **Database migrations:** Alembic
 * **Infrastructure as Code:** Terraform
@@ -414,7 +454,12 @@ The infrastructure includes:
     │       │
     │       ├── domains/            # Domain-oriented application logic
     │       │   ├── auth/
+    │       │   ├── buildings/
+    │       │   ├── dashboards/
+    │       │   ├── map/
+    │       │   ├── resources/
     │       │   ├── tribes/
+    │       │   ├── users/
     │       │   └── villages/
     │       │
     │       ├── game/               # Shared game rules and mechanics
