@@ -41,6 +41,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    JSON,
     String,
     UniqueConstraint,
     func,
@@ -1049,6 +1050,31 @@ class VillageResourceTransactionEntry(Base):
     )
 
 
+class IdempotencyRequest(Base):
+    __tablename__ = "idempotency_request"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    scope: Mapped[str] = mapped_column(String(50), nullable=False)
+    key: Mapped[str] = mapped_column(String(64), nullable=False)
+    request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    response_status: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    response_body: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        index=True,
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "scope",
+            "key",
+            name="uq_idempotency_request_scope_key",
+        ),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Explicit table classification
 # ---------------------------------------------------------------------------
@@ -1090,6 +1116,7 @@ TABLE_CLASSIFICATION: dict[str, frozenset[str]] = {
         {
             "village_farm_upgrade",
             "village_building_upgrade",
+            "idempotency_request",
         }
     ),
     "LEDGER_TRANSACTION": frozenset(

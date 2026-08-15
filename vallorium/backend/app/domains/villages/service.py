@@ -15,7 +15,61 @@ import app.domains.resources.repository as resource_repo
 import app.domains.resources.service as resource_service
 
 
-from app.db.models import Village, UpgradeStatus, Resource
+from app.db.models import Village, UpgradeStatus, Resource, MapTile
+
+
+def initialize_village(
+    db: Session,
+    *,
+    name: str,
+    tile: MapTile,
+    owner_id: int,
+) -> Village:
+    farm_slots = tile.tile_type.farm_slots
+
+    if len(farm_slots) != 18:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Map tile type {tile.map_tile_type_id} does not define 18 farm slots.",
+        )
+
+    v = village_repo.insert_village(
+        db,
+        name=name,
+        map_tile_id=tile.id,
+        owner_id=owner_id,
+    )
+
+    village_repo.insert_farm_plots(
+        db,
+        v.id,
+        farm_slots,
+    )
+
+    resource_type_ids = resource_repo.get_resource_type_ids(db)
+
+    try:
+        starter_pack = {
+            resource_type_ids[Resource.WOOD]: 50,
+            resource_type_ids[Resource.CLAY]: 75,
+            resource_type_ids[Resource.IRON]: 90,
+            resource_type_ids[Resource.CROP]: 40,
+        }
+    except KeyError as exc:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Resource types are not fully configured.",
+        ) from exc
+
+    resource_repo.insert_initial_storage(
+        db,
+        v.id,
+        starter_pack,
+        datetime.now(timezone.utc),
+    )
+
+    db.flush()
+    return v
 
 
 def create_village(db: Session, village: VillageCreate, owner_id: int) -> Village:
@@ -43,51 +97,11 @@ def create_village(db: Session, village: VillageCreate, owner_id: int) -> Villag
                 detail=f"Map tile {village.map_tile_id} is already occupied.",
             )
 
-        farm_slots = tile.tile_type.farm_slots
-
-        if len(farm_slots) != 18:
-            raise HTTPException(
-                status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Map tile type {tile.map_tile_type_id} does not define 18 farm slots.",
-            )
-
-        now = datetime.utcnow()
-
-        v = village_repo.insert_village(
+        v = initialize_village(
             db,
             name=village.name,
-            map_tile_id=village.map_tile_id,
+            tile=tile,
             owner_id=owner_id,
-        )
-
-        village_repo.insert_farm_plots(
-            db,
-            v.id,
-            farm_slots,
-        )
-
-        resource_type_ids = resource_repo.get_resource_type_ids(db)
-
-        try:
-            resource_type_ids = resource_repo.get_resource_type_ids(db)
-
-            starter_pack = {
-                resource_type_ids[Resource.WOOD]: 50,
-                resource_type_ids[Resource.CLAY]: 75,
-                resource_type_ids[Resource.IRON]: 90,
-                resource_type_ids[Resource.CROP]: 40,
-            }
-        except KeyError as exc:
-            raise HTTPException(
-                status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Resource types are not fully configured.",
-            ) from exc
-
-        resource_repo.insert_initial_storage(
-            db,
-            v.id,
-            starter_pack,
-            now,
         )
 
         db.commit()

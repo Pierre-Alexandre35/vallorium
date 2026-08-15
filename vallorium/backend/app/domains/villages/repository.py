@@ -16,6 +16,40 @@ def tile_is_occupied(db_sess: Session, map_tile_id: int) -> bool:
     )
 
 
+def get_random_starter_tile_for_update(
+    db_sess: Session,
+) -> Optional[db.MapTile]:
+    occupied_tile = (
+        db_sess.query(db.Village.id)
+        .filter(db.Village.map_tile_id == db.MapTile.id)
+        .exists()
+    )
+
+    return (
+        db_sess.query(db.MapTile)
+        .join(
+            db.MapTileType,
+            db.MapTileType.id == db.MapTile.map_tile_type_id,
+        )
+        .options(
+            selectinload(db.MapTile.tile_type).selectinload(
+                db.MapTileType.farm_slots
+            ),
+        )
+        .filter(
+            db.MapTile.is_constructible.is_(True),
+            db.MapTileType.starter_eligible.is_(True),
+            ~occupied_tile,
+        )
+        .order_by(func.random())
+        .with_for_update(
+            of=db.MapTile,
+            skip_locked=True,
+        )
+        .first()
+    )
+
+
 def get_tile_for_update(
     db_sess: Session,
     map_tile_id: int,
@@ -71,7 +105,12 @@ def insert_farm_plots(
 def get_village_with_tile(db_sess: Session, village_id: int) -> Optional[db.Village]:
     return (
         db_sess.query(db.Village)
-        .options(joinedload(db.Village.tile))
+        .options(
+            joinedload(db.Village.tile)
+            .joinedload(db.MapTile.tile_type)
+            .selectinload(db.MapTileType.farm_slots)
+            .joinedload(db.MapTileTypeFarmSlot.resource_type)
+        )
         .filter(db.Village.id == village_id)
         .first()
     )

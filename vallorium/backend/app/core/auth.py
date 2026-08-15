@@ -13,7 +13,6 @@ from app.core.sessions import (
     SESSION_COOKIE_NAME,
     get_session_user_id,
 )
-from app.domains.users.schemas import UserCreate
 import app.domains.users.service as user_service
 
 
@@ -97,34 +96,3 @@ def authenticate_user(
 
     return user
 
-
-def sign_up_new_user(
-    db,
-    *,
-    email: str,
-    password: str,
-    tribe_id: int,
-) -> models.User | None:
-    existing_user = user_service.get_user_by_email_raw(
-        db,
-        email,
-    )
-
-    if existing_user is not None:
-        return None
-
-    user_service.create_user(
-        db,
-        UserCreate(
-            email=email,
-            password=password,
-            tribe_id=tribe_id,
-            is_active=True,
-            is_superuser=False,
-        ),
-    )
-
-    return user_service.get_user_by_email_raw(
-        db,
-        email,
-    )

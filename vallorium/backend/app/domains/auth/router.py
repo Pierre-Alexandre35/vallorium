@@ -1,7 +1,10 @@
+from typing import Annotated
+
 from fastapi import (
     APIRouter,
     Cookie,
     Depends,
+    Header,
     HTTPException,
     Response,
     status,
@@ -10,7 +13,6 @@ from fastapi import (
 from app.core.auth import (
     authenticate_user,
     get_current_active_user,
-    sign_up_new_user,
 )
 from app.core.sessions import (
     SESSION_COOKIE_NAME,
@@ -20,6 +22,7 @@ from app.core.sessions import (
     set_session_cookie,
 )
 from app.db.session import get_db
+import app.domains.auth.service as auth_service
 from app.domains.auth.schemas import (
     AuthResponse,
     LoginRequest,
@@ -77,35 +80,30 @@ async def login(
 async def signup(
     data: SignupRequest,
     response: Response,
+    idempotency_key: Annotated[
+        str,
+        Header(
+            alias="Idempotency-Key",
+            min_length=1,
+            max_length=64,
+        ),
+    ],
     db=Depends(get_db),
 ):
-    user = sign_up_new_user(
+    auth_response = auth_service.signup(
         db,
-        email=data.email,
-        password=data.password,
-        tribe_id=data.tribe_id,
+        data=data,
+        idempotency_key=idempotency_key,
     )
 
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Account already exists",
-        )
-
-    session_id = await create_session(user.id)
+    session_id = await create_session(auth_response.user.id)
 
     set_session_cookie(
         response,
         session_id,
     )
 
-    return {
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "is_superuser": user.is_superuser,
-        }
-    }
+    return auth_response
 
 
 @r.post(
