@@ -1,14 +1,24 @@
 from typing import Optional, Sequence
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 import app.db.models as db
 
 
 def get_user(db_sess: Session, user_id: int) -> Optional[db.User]:
-    return db_sess.query(db.User).filter(db.User.id == user_id).first()
+    return (
+        db_sess.query(db.User)
+        .options(joinedload(db.User.tribe))
+        .filter(db.User.id == user_id)
+        .first()
+    )
 
 
 def get_user_by_email(db_sess: Session, email: str) -> Optional[db.User]:
-    return db_sess.query(db.User).filter(db.User.email == email).first()
+    return (
+        db_sess.query(db.User)
+        .options(joinedload(db.User.tribe))
+        .filter(db.User.email == email)
+        .first()
+    )
 
 
 def list_users(db_sess: Session, skip: int = 0, limit: int = 100) -> Sequence[db.User]:

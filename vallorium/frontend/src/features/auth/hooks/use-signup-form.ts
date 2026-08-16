@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { login } from "@/features/auth/api/login";
 import { register } from "@/features/auth/api/register";
 import { cacheCurrentUser } from "@/features/auth/auth-query";
 import type { RegisterFormValues } from "@/features/auth/types/auth";
@@ -30,19 +29,16 @@ export function useSignupForm() {
   const idempotencyKey = useRef(crypto.randomUUID());
 
   const signupMutation = useMutation({
-    mutationFn: async ({
+    mutationFn: ({
       email,
       password,
       tribeId,
       idempotencyKey: requestIdempotencyKey,
-    }: SignupRequest) => {
-      await register(
+    }: SignupRequest) =>
+      register(
         { email, password, tribeId },
         requestIdempotencyKey,
-      );
-
-      return login({ email, password });
-    },
+      ),
     onSuccess: ({ user }) => {
       cacheCurrentUser(queryClient, user);
       navigate("/app", { replace: true });

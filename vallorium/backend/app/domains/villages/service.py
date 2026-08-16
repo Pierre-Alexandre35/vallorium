@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
@@ -117,7 +116,7 @@ def create_village(db: Session, village: VillageCreate, owner_id: int) -> Villag
         raise
 
 
-def get_user_villages(db: Session, owner_id: int) -> Optional[List[Village]]:
+def get_user_villages(db: Session, owner_id: int) -> list[Village]:
     return village_repo.get_user_villages(db, owner_id)
 
 
@@ -153,7 +152,7 @@ def get_village_production_summary(
         production=[
             ResourceProduction(
                 resource_type=getattr(res, "value", str(res)),
-                total=int(total or 0),
+                amount_per_hour=int(total or 0),
             )
             for res, total in production
         ],
@@ -183,7 +182,6 @@ def get_village_resource_balances(
     balance_map = resource_service.get_computed_balance_map(
         db_sess=db,
         village_id=village_id,
-        owner_id=owner_id,
     )
 
     return VillageResourceOut(

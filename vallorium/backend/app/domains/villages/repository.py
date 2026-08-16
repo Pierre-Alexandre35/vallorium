@@ -159,8 +159,14 @@ def get_village_production(
     )
 
 
-def get_user_villages(db_sess: Session, owner_id: int) -> Optional[List[db.Village]]:
-    return db_sess.query(db.Village).filter(db.Village.owner_id == owner_id).all()
+def get_user_villages(db_sess: Session, owner_id: int) -> List[db.Village]:
+    return (
+        db_sess.query(db.Village)
+        .options(joinedload(db.Village.tile))
+        .filter(db.Village.owner_id == owner_id)
+        .order_by(db.Village.id)
+        .all()
+    )
 
 
 def get_village_by_id(

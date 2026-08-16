@@ -8,7 +8,7 @@ class ResourceTypeOut(AppBaseModel):
 
 class ResourceProduction(AppBaseModel):
     resource_type: str
-    total: int
+    amount_per_hour: int
 
 
 class ResourceBalance(AppBaseModel):

@@ -15,10 +15,10 @@ def _session_key(session_id: str) -> str:
     return f"session:{digest}"
 
 
-async def create_session(user_id: int) -> str:
+def create_session(user_id: int) -> str:
     session_id = secrets.token_urlsafe(32)
 
-    await redis_client.set(
+    redis_client.set(
         _session_key(session_id),
         str(user_id),
         ex=SESSION_TTL_SECONDS,
@@ -27,10 +27,10 @@ async def create_session(user_id: int) -> str:
     return session_id
 
 
-async def get_session_user_id(
+def get_session_user_id(
     session_id: str,
 ) -> int | None:
-    value = await redis_client.get(_session_key(session_id))
+    value = redis_client.get(_session_key(session_id))
 
     if value is None:
         return None
@@ -38,10 +38,10 @@ async def get_session_user_id(
     return int(value)
 
 
-async def delete_session(
+def delete_session(
     session_id: str,
 ) -> None:
-    await redis_client.delete(_session_key(session_id))
+    redis_client.delete(_session_key(session_id))
 
 
 def set_session_cookie(

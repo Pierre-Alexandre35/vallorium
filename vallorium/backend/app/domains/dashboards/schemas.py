@@ -19,6 +19,7 @@ class DashboardVillageOut(AppBaseModel):
     y: int | None = None
     production: Dict[str, int]
     resources: Dict[str, int]
+    capacities: Dict[str, int]
 
 
 class DashboardTotalsOut(AppBaseModel):

@@ -9,7 +9,6 @@ from fastapi import (
     Response,
     status,
 )
-
 from app.core.auth import (
     authenticate_user,
     get_current_active_user,
@@ -39,7 +38,7 @@ auth_router = r = APIRouter(
     "/login",
     response_model=AuthResponse,
 )
-async def login(
+def login(
     data: LoginRequest,
     response: Response,
     db=Depends(get_db),
@@ -56,7 +55,7 @@ async def login(
             detail="Incorrect email or password",
         )
 
-    session_id = await create_session(user.id)
+    session_id = create_session(user.id)
 
     set_session_cookie(
         response,
@@ -77,7 +76,7 @@ async def login(
     response_model=AuthResponse,
     status_code=status.HTTP_201_CREATED,
 )
-async def signup(
+def signup(
     data: SignupRequest,
     response: Response,
     idempotency_key: Annotated[
@@ -96,7 +95,7 @@ async def signup(
         idempotency_key=idempotency_key,
     )
 
-    session_id = await create_session(auth_response.user.id)
+    session_id = create_session(auth_response.user.id)
 
     set_session_cookie(
         response,
@@ -110,7 +109,7 @@ async def signup(
     "/logout",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-async def logout(
+def logout(
     response: Response,
     session_id: str | None = Cookie(
         default=None,
@@ -118,7 +117,7 @@ async def logout(
     ),
 ):
     if session_id is not None:
-        await delete_session(session_id)
+        delete_session(session_id)
 
     clear_session_cookie(response)
 
@@ -127,7 +126,7 @@ async def logout(
     "/me",
     response_model=AuthResponse,
 )
-async def me(
+def me(
     current_user=Depends(get_current_active_user),
 ):
     return {
