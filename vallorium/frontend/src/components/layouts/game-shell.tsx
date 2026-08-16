@@ -22,12 +22,12 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import type { MouseEvent, PropsWithChildren, ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { GameLogo } from "@/components/brand/game-logo";
-import { storage } from "@/lib/storage";
+import { useLogout } from "@/features/auth/hooks/use-logout";
 import { gameTokens } from "@/theme";
 
 type NavItem = {
@@ -44,15 +44,11 @@ const navItems: NavItem[] = [
   { label: "Statistics", icon: <AnalyticsRoundedIcon fontSize="small" />, path: null },
 ];
 
-export function GameShell({ children }: PropsWithChildren) {
+export function GameShell() {
   const navigate = useNavigate();
   const location = useLocation();
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
-
-  function logout() {
-    storage.clearAccessToken();
-    navigate("/login", { replace: true });
-  }
+  const { signOut, isSigningOut } = useLogout();
 
   function openMobileMenu(event: MouseEvent<HTMLElement>) {
     setMenuAnchor(event.currentTarget);
@@ -149,7 +145,7 @@ export function GameShell({ children }: PropsWithChildren) {
                 <AccountCircleRoundedIcon />
               </Avatar>
               <Tooltip title="Sign out">
-                <IconButton onClick={logout} aria-label="Sign out">
+                <IconButton onClick={() => signOut()} disabled={isSigningOut} aria-label="Sign out">
                   <LogoutRoundedIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
@@ -157,7 +153,7 @@ export function GameShell({ children }: PropsWithChildren) {
           </Toolbar>
         </Container>
       </AppBar>
-      {children}
+      <Outlet />
     </Box>
   );
 }

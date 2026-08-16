@@ -1,10 +1,12 @@
-import axios from "axios";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { login } from "@/features/auth/api/login";
 import { register } from "@/features/auth/api/register";
+import { cacheCurrentUser } from "@/features/auth/auth-query";
 import type { RegisterFormValues } from "@/features/auth/types/auth";
+import { getRequestErrorMessage } from "@/features/auth/utils/get-request-error-message";
 
 const INITIAL_VALUES: RegisterFormValues = {
   email: "",
@@ -13,106 +15,80 @@ const INITIAL_VALUES: RegisterFormValues = {
   tribeId: null,
 };
 
-function getErrorMessage(error: unknown, fallback: string): string {
-  if (!axios.isAxiosError(error)) {
-    return fallback;
-  }
-
-  const detail = error.response?.data?.detail;
-
-  if (typeof detail === "string") {
-    return detail;
-  }
-
-  if (Array.isArray(detail)) {
-    return detail
-      .map((item) => {
-        if (
-          item &&
-          typeof item === "object" &&
-          "msg" in item &&
-          typeof item.msg === "string"
-        ) {
-          return item.msg;
-        }
-
-        return "Invalid value";
-      })
-      .join(", ");
-  }
-
-  return fallback;
+interface SignupRequest {
+  email: string;
+  password: string;
+  tribeId: number;
+  idempotencyKey: string;
 }
 
 export function useSignupForm() {
   const navigate = useNavigate();
-
+  const queryClient = useQueryClient();
   const [values, setValues] = useState<RegisterFormValues>(INITIAL_VALUES);
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const idempotencyKey = useRef(crypto.randomUUID());
 
+  const signupMutation = useMutation({
+    mutationFn: async ({
+      email,
+      password,
+      tribeId,
+      idempotencyKey: requestIdempotencyKey,
+    }: SignupRequest) => {
+      await register(
+        { email, password, tribeId },
+        requestIdempotencyKey,
+      );
+
+      return login({ email, password });
+    },
+    onSuccess: ({ user }) => {
+      cacheCurrentUser(queryClient, user);
+      navigate("/app", { replace: true });
+    },
+  });
+
   function validateAccountStep(): boolean {
-    setError(null);
+    setValidationError(null);
 
     if (!values.email.trim()) {
-      setError("Enter your email address.");
+      setValidationError("Enter your email address.");
       return false;
     }
 
     if (values.password.length < 8) {
-      setError("Use at least 8 characters for your password.");
+      setValidationError("Use at least 8 characters for your password.");
       return false;
     }
 
     if (values.password !== values.confirmPassword) {
-      setError("The passwords do not match.");
+      setValidationError("The passwords do not match.");
       return false;
     }
 
     return true;
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    setValidationError(null);
 
     if (!validateAccountStep()) {
       return;
     }
 
     if (values.tribeId === null) {
-      setError("Choose a tribe before continuing.");
+      setValidationError("Choose a tribe before continuing.");
       return;
     }
 
-    setIsSubmitting(true);
-
-    const email = values.email.trim();
-
-    try {
-      await register(
-        {
-          email,
-          password: values.password,
-          tribeId: values.tribeId,
-        },
-        idempotencyKey.current,
-      );
-
-      await login({
-        email,
-        password: values.password,
-      });
-
-      navigate("/app", { replace: true });
-    } catch (requestError) {
-      setError(
-        getErrorMessage(requestError, "Unable to create your account."),
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+    signupMutation.mutate({
+      email: values.email.trim(),
+      password: values.password,
+      tribeId: values.tribeId,
+      idempotencyKey: idempotencyKey.current,
+    });
   }
 
   function updateField<K extends keyof RegisterFormValues>(
@@ -124,13 +100,25 @@ export function useSignupForm() {
       [field]: value,
     }));
 
+    setValidationError(null);
     idempotencyKey.current = crypto.randomUUID();
+
+    if (signupMutation.isError) {
+      signupMutation.reset();
+    }
   }
 
   return {
     values,
-    error,
-    isSubmitting,
+    error:
+      validationError ??
+      (signupMutation.error
+        ? getRequestErrorMessage(
+            signupMutation.error,
+            "Unable to create your account.",
+          )
+        : null),
+    isSubmitting: signupMutation.isPending,
     validateAccountStep,
     handleSubmit,
     updateField,
