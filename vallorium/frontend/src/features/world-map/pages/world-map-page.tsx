@@ -18,7 +18,6 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { GameShell } from "@/components/layouts/game-shell";
 import { GamePanel } from "@/components/ui/game-panel";
 import { MapLegend } from "@/features/world-map/components/map-legend";
 import {
@@ -63,123 +62,121 @@ export function WorldMapPage() {
   const displayedTile = hoveredTile ?? selectedTile;
 
   return (
-    <GameShell>
-      <Container
-        maxWidth={false}
-        sx={{ maxWidth: gameTokens.layout.contentMaxWidth, pt: { xs: 2, md: 3 } }}
+    <Container
+      maxWidth={false}
+      sx={{ maxWidth: gameTokens.layout.contentMaxWidth, pt: { xs: 2, md: 3 } }}
+    >
+      {query.isError ? (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          The map API is unavailable, so this page is rendering the supplied resource-layout data as a local 100×100 preview world.
+        </Alert>
+      ) : null}
+
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        alignItems={{ xs: "stretch", sm: "center" }}
+        justifyContent="space-between"
+        spacing={1.5}
+        sx={{ mb: 2 }}
       >
-        {query.isError ? (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            The map API is unavailable, so this page is rendering the supplied resource-layout data as a local 100×100 preview world.
-          </Alert>
-        ) : null}
-
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          alignItems={{ xs: "stretch", sm: "center" }}
-          justifyContent="space-between"
-          spacing={1.5}
-          sx={{ mb: 2 }}
-        >
-          <Box>
-            {query.isLoading && !query.isError ? (
-              <>
-                <Skeleton width={210} height={42} />
-                <Skeleton width={330} />
-              </>
-            ) : (
-              <>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <MapRoundedIcon color="primary" />
-                  <Typography variant="h4">World map</Typography>
-                </Stack>
-                <Typography color="text.secondary" sx={{ mt: 0.35 }}>
-                  Explore tiles, inspect field layouts, and find your next settlement.
-                </Typography>
-              </>
-            )}
-          </Box>
-
-          <Stack direction="row" spacing={0.75} alignItems="center">
-            <Tooltip title="Zoom out">
-              <IconButton onClick={() => canvasRef.current?.zoomOut()} aria-label="Zoom out">
-                <ZoomOutRoundedIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Zoom in">
-              <IconButton onClick={() => canvasRef.current?.zoomIn()} aria-label="Zoom in">
-                <ZoomInRoundedIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Reset view">
-              <IconButton onClick={() => canvasRef.current?.resetView()} aria-label="Reset map view">
-                <CenterFocusStrongRoundedIcon />
-              </IconButton>
-            </Tooltip>
-            <Button
-              variant="outlined"
-              startIcon={<MyLocationRoundedIcon />}
-              onClick={() => {
-                if (playerTile) canvasRef.current?.centerOn(playerTile.x, playerTile.y);
-              }}
-              disabled={!playerTile}
-              sx={{ display: { xs: "none", sm: "inline-flex" } }}
-            >
-              My village
-            </Button>
-            <Tooltip title="Refresh map data">
-              <IconButton onClick={() => query.refetch()} aria-label="Refresh map data">
-                <RefreshRoundedIcon />
-              </IconButton>
-            </Tooltip>
-          </Stack>
-        </Stack>
-
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: { xs: "1fr", xl: "minmax(0, 1fr) 320px" },
-            gap: 2,
-            alignItems: "start",
-          }}
-        >
-          <GamePanel sx={{ p: { xs: 0.75, md: 1 }, overflow: "hidden" }}>
-            <WorldMapCanvas
-              ref={canvasRef}
-              tiles={mapData.tiles}
-              bounds={mapData.bounds}
-              selectedTileId={selectedTile?.id ?? null}
-              initialCenter={playerTile ? { x: playerTile.x, y: playerTile.y } : undefined}
-              onSelectTile={setSelectedTile}
-              onHoverTile={setHoveredTile}
-            />
-            <Stack
-              direction="row"
-              alignItems="center"
-              justifyContent="space-between"
-              sx={{ px: 1, pt: 1, pb: 0.25 }}
-            >
-              <Typography variant="caption" color="text.secondary">
-                Showing {mapData.tiles.length.toLocaleString()} tiles · World 1
+        <Box>
+          {query.isLoading && !query.isError ? (
+            <>
+              <Skeleton width={210} height={42} />
+              <Skeleton width={330} />
+            </>
+          ) : (
+            <>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <MapRoundedIcon color="primary" />
+                <Typography variant="h4">World map</Typography>
+              </Stack>
+              <Typography color="text.secondary" sx={{ mt: 0.35 }}>
+                Explore tiles, inspect field layouts, and find your next settlement.
               </Typography>
-              {displayedTile ? (
-                <Typography variant="caption" fontWeight={gameTokens.typography.weight.bold}>
-                  {displayedTile.x} | {displayedTile.y} · {displayedTile.resourceLayout}
-                </Typography>
-              ) : null}
-            </Stack>
-          </GamePanel>
-
-          <Stack spacing={2}>
-            <TileDetailsPanel
-              tile={selectedTile}
-              onCenter={(tile) => canvasRef.current?.centerOn(tile.x, tile.y)}
-              onOpenVillage={() => navigate("/app")}
-            />
-            <MapLegend />
-          </Stack>
+            </>
+          )}
         </Box>
-      </Container>
-    </GameShell>
+
+        <Stack direction="row" spacing={0.75} alignItems="center">
+          <Tooltip title="Zoom out">
+            <IconButton onClick={() => canvasRef.current?.zoomOut()} aria-label="Zoom out">
+              <ZoomOutRoundedIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Zoom in">
+            <IconButton onClick={() => canvasRef.current?.zoomIn()} aria-label="Zoom in">
+              <ZoomInRoundedIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Reset view">
+            <IconButton onClick={() => canvasRef.current?.resetView()} aria-label="Reset map view">
+              <CenterFocusStrongRoundedIcon />
+            </IconButton>
+          </Tooltip>
+          <Button
+            variant="outlined"
+            startIcon={<MyLocationRoundedIcon />}
+            onClick={() => {
+              if (playerTile) canvasRef.current?.centerOn(playerTile.x, playerTile.y);
+            }}
+            disabled={!playerTile}
+            sx={{ display: { xs: "none", sm: "inline-flex" } }}
+          >
+            My village
+          </Button>
+          <Tooltip title="Refresh map data">
+            <IconButton onClick={() => query.refetch()} aria-label="Refresh map data">
+              <RefreshRoundedIcon />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+      </Stack>
+
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", xl: "minmax(0, 1fr) 320px" },
+          gap: 2,
+          alignItems: "start",
+        }}
+      >
+        <GamePanel sx={{ p: { xs: 0.75, md: 1 }, overflow: "hidden" }}>
+          <WorldMapCanvas
+            ref={canvasRef}
+            tiles={mapData.tiles}
+            bounds={mapData.bounds}
+            selectedTileId={selectedTile?.id ?? null}
+            initialCenter={playerTile ? { x: playerTile.x, y: playerTile.y } : undefined}
+            onSelectTile={setSelectedTile}
+            onHoverTile={setHoveredTile}
+          />
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            sx={{ px: 1, pt: 1, pb: 0.25 }}
+          >
+            <Typography variant="caption" color="text.secondary">
+              Showing {mapData.tiles.length.toLocaleString()} tiles · World 1
+            </Typography>
+            {displayedTile ? (
+              <Typography variant="caption" fontWeight={gameTokens.typography.weight.bold}>
+                {displayedTile.x} | {displayedTile.y} · {displayedTile.resourceLayout}
+              </Typography>
+            ) : null}
+          </Stack>
+        </GamePanel>
+
+        <Stack spacing={2}>
+          <TileDetailsPanel
+            tile={selectedTile}
+            onCenter={(tile) => canvasRef.current?.centerOn(tile.x, tile.y)}
+            onOpenVillage={() => navigate("/app")}
+          />
+          <MapLegend />
+        </Stack>
+      </Box>
+    </Container>
   );
 }

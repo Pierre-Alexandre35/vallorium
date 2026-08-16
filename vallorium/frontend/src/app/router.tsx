@@ -1,7 +1,8 @@
-import { Box, CircularProgress } from "@mui/material";
 import { lazy, Suspense } from "react";
 import { Navigate, createBrowserRouter } from "react-router-dom";
 
+import { GameShell } from "@/components/layouts/game-shell";
+import { FullPageLoader } from "@/components/ui/full-page-loader";
 import { LoginPage } from "@/features/auth/pages/login-page";
 import { SignupPage } from "@/features/auth/pages/signup-page";
 import { HomePage } from "@/features/villages/pages/home-page";
@@ -13,34 +14,28 @@ const WorldMapPage = lazy(() =>
   })),
 );
 
-
 export const router = createBrowserRouter([
   { path: "/", element: <Navigate to="/app" replace /> },
   { path: "/login", element: <LoginPage /> },
   { path: "/signup", element: <SignupPage /> },
   {
-    path: "/app",
-    element: (
-      <ProtectedRoute>
-        <HomePage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/app/map",
-    element: (
-      <ProtectedRoute>
-        <Suspense
-          fallback={
-            <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-              <CircularProgress />
-            </Box>
-          }
-        >
-          <WorldMapPage />
-        </Suspense>
-      </ProtectedRoute>
-    ),
+    element: <ProtectedRoute />,
+    children: [
+      {
+        element: <GameShell />,
+        children: [
+          { path: "/app", element: <HomePage /> },
+          {
+            path: "/app/map",
+            element: (
+              <Suspense fallback={<FullPageLoader />}>
+                <WorldMapPage />
+              </Suspense>
+            ),
+          },
+        ],
+      },
+    ],
   },
   { path: "*", element: <Navigate to="/app" replace /> },
 ]);

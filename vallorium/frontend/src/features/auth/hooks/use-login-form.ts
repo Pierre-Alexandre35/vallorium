@@ -1,72 +1,58 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, type FormEvent } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { login } from "@/features/auth/api/login";
+import { cacheCurrentUser } from "@/features/auth/auth-query";
 import type { LoginFormValues } from "@/features/auth/types/auth";
+import { getRequestErrorMessage } from "@/features/auth/utils/get-request-error-message";
 
 const INITIAL_VALUES: LoginFormValues = {
   email: "",
   password: "",
 };
 
-function getErrorMessage(error: unknown, fallback: string): string {
-  if (!axios.isAxiosError(error)) {
-    return fallback;
+interface LoginLocationState {
+  from?: {
+    pathname?: string;
+    search?: string;
+    hash?: string;
+  };
+}
+
+function getPostLoginPath(state: LoginLocationState | null): string {
+  const from = state?.from;
+
+  if (!from?.pathname?.startsWith("/") || from.pathname.startsWith("//")) {
+    return "/app";
   }
 
-  const detail = error.response?.data?.detail;
-
-  if (typeof detail === "string") {
-    return detail;
-  }
-
-  if (Array.isArray(detail)) {
-    return detail
-      .map((item) => {
-        if (
-          item &&
-          typeof item === "object" &&
-          "msg" in item &&
-          typeof item.msg === "string"
-        ) {
-          return item.msg;
-        }
-
-        return "Invalid value";
-      })
-      .join(", ");
-  }
-
-  return fallback;
+  return `${from.pathname}${from.search ?? ""}${from.hash ?? ""}`;
 }
 
 export function useLoginForm() {
   const navigate = useNavigate();
-
+  const location = useLocation();
+  const queryClient = useQueryClient();
   const [values, setValues] = useState<LoginFormValues>(INITIAL_VALUES);
 
-  const [error, setError] = useState<string | null>(null);
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-
-    setError(null);
-    setIsSubmitting(true);
-
-    try {
-      await login(values);
-
-      navigate("/app", {
+  const loginMutation = useMutation({
+    mutationFn: (formValues: LoginFormValues) =>
+      login({
+        email: formValues.email.trim(),
+        password: formValues.password,
+      }),
+    onSuccess: ({ user }) => {
+      cacheCurrentUser(queryClient, user);
+      navigate(getPostLoginPath(location.state as LoginLocationState | null), {
         replace: true,
       });
-    } catch (error) {
-      setError(getErrorMessage(error, "Unable to sign in."));
-    } finally {
-      setIsSubmitting(false);
-    }
+    },
+  });
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    loginMutation.mutate(values);
   }
 
   function updateField<K extends keyof LoginFormValues>(
@@ -77,12 +63,18 @@ export function useLoginForm() {
       ...current,
       [field]: value,
     }));
+
+    if (loginMutation.isError) {
+      loginMutation.reset();
+    }
   }
 
   return {
     values,
-    error,
-    isSubmitting,
+    error: loginMutation.error
+      ? getRequestErrorMessage(loginMutation.error, "Unable to sign in.")
+      : null,
+    isSubmitting: loginMutation.isPending,
     handleSubmit,
     updateField,
   };

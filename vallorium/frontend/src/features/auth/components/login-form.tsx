@@ -4,29 +4,19 @@ import {
   Alert,
   Box,
   Button,
-  Checkbox,
   CircularProgress,
-  Divider,
-  FormControlLabel,
   InputAdornment,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
-import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 
 import { useLoginForm } from "@/features/auth/hooks/use-login-form";
-import { storage } from "@/lib/storage";
 import { gameTokens } from "@/theme";
 
 export function LoginForm() {
-  const navigate = useNavigate();
   const { values, error, isSubmitting, handleSubmit, updateField } = useLoginForm();
-
-  function openPreview() {
-    storage.setAccessToken("development-preview");
-    navigate("/app");
-  }
 
   return (
     <Box component="form" onSubmit={handleSubmit} noValidate>
@@ -76,28 +66,9 @@ export function LoginForm() {
           }}
         />
 
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <FormControlLabel
-            control={<Checkbox size="small" defaultChecked />}
-            label={<Typography variant="body2">Keep me signed in</Typography>}
-          />
-          <Button size="small" variant="text" sx={{ px: 1 }}>
-            Forgot password?
-          </Button>
-        </Stack>
-
         <Button type="submit" variant="contained" size="large" disabled={isSubmitting}>
           {isSubmitting ? <CircularProgress size={23} color="inherit" /> : "Enter the realm"}
         </Button>
-
-        {import.meta.env.DEV ? (
-          <>
-            <Divider>or</Divider>
-            <Button type="button" variant="outlined" onClick={openPreview}>
-              Preview the village dashboard
-            </Button>
-          </>
-        ) : null}
 
         <Typography variant="body2" color="text.secondary" textAlign="center">
           New to Verdant Realms?{" "}
