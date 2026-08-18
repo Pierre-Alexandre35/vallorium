@@ -2,7 +2,7 @@
 from __future__ import annotations
 from typing import Optional, Sequence, Dict
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import asc, or_
+from sqlalchemy import asc, case, or_, select
 
 import app.db.models as db
 
@@ -50,37 +50,31 @@ def get_storage_caps_by_village_ids(
     if not village_ids:
         return {}
 
-    # Prefer explicit level 0 capacity.
-    warehouse_cap = (
-        db_sess.query(db.WarehouseCapacity.capacity)
-        .filter(db.WarehouseCapacity.level == 0)
-        .scalar()
+    # Storage capacity is reference data and is currently identical for every
+    # village. Fetch warehouse + granary defaults in a single DB round-trip.
+    warehouse_cap_query = (
+        select(db.WarehouseCapacity.capacity)
+        .order_by(
+            case((db.WarehouseCapacity.level == 0, 0), else_=1),
+            db.WarehouseCapacity.level.asc(),
+        )
+        .limit(1)
+        .scalar_subquery()
+    )
+    granary_cap_query = (
+        select(db.GranaryCapacity.capacity)
+        .order_by(
+            case((db.GranaryCapacity.level == 0, 0), else_=1),
+            db.GranaryCapacity.level.asc(),
+        )
+        .limit(1)
+        .scalar_subquery()
     )
 
-    granary_cap = (
-        db_sess.query(db.GranaryCapacity.capacity)
-        .filter(db.GranaryCapacity.level == 0)
-        .scalar()
-    )
+    warehouse_cap, granary_cap = db_sess.query(
+        warehouse_cap_query,
+        granary_cap_query,
+    ).one()
 
-    # Fallback in case the seeded capacity tables start at level 1.
-    if warehouse_cap is None:
-        warehouse_cap = (
-            db_sess.query(db.WarehouseCapacity.capacity)
-            .order_by(db.WarehouseCapacity.level.asc())
-            .limit(1)
-            .scalar()
-        )
-
-    if granary_cap is None:
-        granary_cap = (
-            db_sess.query(db.GranaryCapacity.capacity)
-            .order_by(db.GranaryCapacity.level.asc())
-            .limit(1)
-            .scalar()
-        )
-
-    warehouse_cap = int(warehouse_cap or 0)
-    granary_cap = int(granary_cap or 0)
-
-    return {village_id: (warehouse_cap, granary_cap) for village_id in village_ids}
+    capacities = (int(warehouse_cap or 0), int(granary_cap or 0))
+    return {village_id: capacities for village_id in village_ids}

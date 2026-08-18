@@ -4,7 +4,6 @@ from typing import List
 
 from app.db.session import get_db
 import app.domains.villages.service as village_service
-import app.domains.resources.service as resouce_service
 from app.domains.villages.schemas import (
     VillageCreate,
     VillageOut,
@@ -21,7 +20,7 @@ village_router = APIRouter()
 @village_router.post(
     "/villages", response_model=VillageOut, response_model_exclude_none=True
 )
-async def village_create(
+def village_create(
     village: VillageCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -37,7 +36,7 @@ async def village_create(
     response_model=List[VillageOut],
     response_model_exclude_none=True,
 )
-async def list_user_villages(
+def list_user_villages(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
@@ -52,7 +51,7 @@ async def list_user_villages(
     response_model=VillageOut,
     response_model_exclude_none=True,
 )
-async def get_my_village(
+def get_my_village(
     village_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -68,7 +67,7 @@ async def get_my_village(
     response_model=VillageOut,
     response_model_exclude_none=True,
 )
-async def get_village_by_name(
+def get_village_by_name(
     village_name: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -84,7 +83,7 @@ async def get_village_by_name(
     response_model=VillageProductionOut,
     response_model_exclude_none=True,
 )
-async def get_village_resource_production(
+def get_village_resource_production(
     village_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),

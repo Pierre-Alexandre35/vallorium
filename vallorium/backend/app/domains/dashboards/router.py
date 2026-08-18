@@ -15,7 +15,7 @@ dashboard_router = APIRouter()
     response_model=DashboardOverviewOut,
     response_model_exclude_none=True,
 )
-async def get_dashboard_overview(
+def get_dashboard_overview(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):

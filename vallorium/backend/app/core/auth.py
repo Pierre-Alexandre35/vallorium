@@ -16,7 +16,7 @@ from app.core.sessions import (
 import app.domains.users.service as user_service
 
 
-async def get_current_user(
+def get_current_user(
     db=Depends(session.get_db),
     session_id: str | None = Cookie(
         default=None,
@@ -29,7 +29,7 @@ async def get_current_user(
             detail="Not authenticated",
         )
 
-    user_id = await get_session_user_id(session_id)
+    user_id = get_session_user_id(session_id)
 
     if user_id is None:
         raise HTTPException(
@@ -51,7 +51,7 @@ async def get_current_user(
     return user
 
 
-async def get_current_active_user(
+def get_current_active_user(
     current_user: models.User = Depends(get_current_user),
 ) -> models.User:
     if not current_user.is_active:
@@ -63,7 +63,7 @@ async def get_current_active_user(
     return current_user
 
 
-async def get_current_active_superuser(
+def get_current_active_superuser(
     current_user: models.User = Depends(get_current_user),
 ) -> models.User:
     if not current_user.is_superuser:

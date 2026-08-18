@@ -1,45 +1,105 @@
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
-import { Alert, Box, Container, IconButton, Skeleton, Stack, Tooltip, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Container,
+  IconButton,
+  Skeleton,
+  Stack,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 
 import { ResourceBar } from "@/features/villages/components/resource-bar";
 import { VillageFieldMap } from "@/features/villages/components/village-field-map";
 import { VillageSidebar } from "@/features/villages/components/village-sidebar";
 import { VillageStatusPanel } from "@/features/villages/components/village-status-panel";
-import { demoVillages } from "@/features/villages/data/demo-village";
 import { useHomeData } from "@/features/villages/hooks/use-home-data";
 import { gameTokens } from "@/theme";
 
 export function HomePage() {
   const query = useHomeData();
-  const villages = query.data?.length ? query.data : demoVillages;
-  const village = villages[0];
+
+  if (query.isError) {
+    return (
+      <Container
+        maxWidth={false}
+        sx={{ maxWidth: gameTokens.layout.contentMaxWidth, pt: { xs: 2, md: 3 } }}
+      >
+        <Alert
+          severity="error"
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              disabled={query.isFetching}
+              onClick={() => void query.refetch()}
+            >
+              Retry
+            </Button>
+          }
+        >
+          Unable to load your village dashboard.
+        </Alert>
+      </Container>
+    );
+  }
+
+  if (query.isPending) {
+    return (
+      <Container
+        maxWidth={false}
+        sx={{ maxWidth: gameTokens.layout.contentMaxWidth, pt: { xs: 2, md: 3 } }}
+      >
+        <Stack spacing={2}>
+          <Box>
+            <Skeleton width={180} height={38} />
+            <Skeleton width={125} />
+          </Box>
+          <Skeleton variant="rounded" height={110} />
+          <Skeleton variant="rounded" height={420} />
+        </Stack>
+      </Container>
+    );
+  }
+
+  const village = query.data.villages[0];
+
+  if (!village) {
+    return (
+      <Container
+        maxWidth={false}
+        sx={{ maxWidth: gameTokens.layout.contentMaxWidth, pt: { xs: 2, md: 3 } }}
+      >
+        <Alert severity="info">No villages are available for this account yet.</Alert>
+      </Container>
+    );
+  }
 
   return (
-    <Container maxWidth={false} sx={{ maxWidth: gameTokens.layout.contentMaxWidth, pt: { xs: 2, md: 3 } }}>
-      {query.isError ? (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          The API is unavailable, so the dashboard is showing preview data. Retry after starting the FastAPI server.
-        </Alert>
-      ) : null}
-
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+    <Container
+      maxWidth={false}
+      sx={{ maxWidth: gameTokens.layout.contentMaxWidth, pt: { xs: 2, md: 3 } }}
+    >
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        sx={{ mb: 2 }}
+      >
         <Box>
-          {query.isLoading ? (
-            <>
-              <Skeleton width={180} height={38} />
-              <Skeleton width={125} />
-            </>
-          ) : (
-            <>
-              <Typography variant="h4">{village.name}</Typography>
-              <Typography color="text.secondary" sx={{ mt: 0.35 }}>
-                Capital village · Roman Empire
-              </Typography>
-            </>
-          )}
+          <Typography variant="h4">{village.name}</Typography>
+          <Typography color="text.secondary" sx={{ mt: 0.35 }}>
+            {query.data.user.tribe_name} village
+          </Typography>
         </Box>
         <Tooltip title="Refresh village data">
-          <IconButton onClick={() => query.refetch()} aria-label="Refresh village data">
+          <IconButton
+            onClick={() => void query.refetch()}
+            disabled={query.isFetching}
+            aria-label="Refresh village data"
+          >
             <RefreshRoundedIcon />
           </IconButton>
         </Tooltip>

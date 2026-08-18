@@ -1,55 +1,28 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { getVillageProduction } from "../api/get-village-production";
-import { getVillageResources } from "../api/get-village-resources";
-import { listUserVillages } from "../api/list-user-villages";
-import type { VillageRow } from "../types/village";
+import { getDashboardOverview } from "@/features/villages/api/get-dashboard-overview";
+import type { DashboardOverview, VillageRow } from "@/features/villages/types/village";
 
-function normalizeResourceKey(key: string) {
-  const normalized = key.toLowerCase();
-  return normalized === "corn" || normalized === "wheat" ? "crop" : normalized;
-}
-
-function toRecord<T extends { resource_type: string }>(
-  items: T[],
-  getValue: (item: T) => number,
-) {
-  return items.reduce<Record<string, number>>((acc, item) => {
-    acc[normalizeResourceKey(item.resource_type)] = getValue(item);
-    return acc;
-  }, {});
+function toVillageRow(village: DashboardOverview["villages"][number]): VillageRow {
+  return {
+    id: village.id,
+    name: village.name,
+    population: village.population,
+    coordinates:
+      village.x !== null && village.y !== null ? `${village.x}|${village.y}` : "—",
+    production: village.production,
+    resources: village.resources,
+    capacities: village.capacities,
+  };
 }
 
 export function useHomeData() {
   return useQuery({
-    queryKey: ["home-data"],
-    queryFn: async (): Promise<VillageRow[]> => {
-      const villages = await listUserVillages();
-
-      return Promise.all(
-        villages.map(async (village) => {
-          const [productionData, resourceData] = await Promise.all([
-            getVillageProduction(village.id),
-            getVillageResources(village.id),
-          ]);
-
-          return {
-            id: village.id,
-            name: village.name,
-            population: village.population,
-            coordinates:
-              village.tile?.x !== undefined && village.tile?.y !== undefined
-                ? `${village.tile.x}|${village.tile.y}`
-                : "—",
-            production: toRecord(
-              productionData.production,
-              (item) => item.amount_per_hour,
-            ),
-            resources: toRecord(resourceData.resources, (item) => item.amount),
-            capacities: toRecord(resourceData.resources, (item) => item.capacity ?? 6300),
-          };
-        }),
-      );
-    },
+    queryKey: ["dashboard", "overview"],
+    queryFn: ({ signal }) => getDashboardOverview(signal),
+    select: (overview) => ({
+      ...overview,
+      villages: overview.villages.map(toVillageRow),
+    }),
   });
 }

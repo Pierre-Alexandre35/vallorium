@@ -11,10 +11,6 @@ import app.domains.resources.repository as resource_repo
 import app.domains.villages.repository as village_repo
 
 
-class VillageNotFoundError(Exception):
-    pass
-
-
 class InsufficientResourcesError(Exception):
     def __init__(
         self,
@@ -81,18 +77,10 @@ def _compute_gain(hourly_rate: int, elapsed_seconds: float) -> int:
 def get_computed_balance_map(
     db_sess: Session,
     village_id: int,
-    owner_id: int,
     now: datetime | None = None,
 ) -> dict[str, int]:
+    """Compute current balances for an already-authorized village."""
     now_utc = _normalize_dt(now or _utcnow())
-
-    village = village_repo.get_village_by_id(
-        db_sess=db_sess,
-        owner_id=owner_id,
-        village_id=village_id,
-    )
-    if village is None:
-        raise VillageNotFoundError(village_id)
 
     storages = resource_repo.load_storages(
         db_sess=db_sess,

@@ -1,39 +1,36 @@
 export type ResourceKey = "wood" | "clay" | "iron" | "crop";
 
-export type MapTileOut = {
+export type ResourceMap = Record<ResourceKey, number>;
+
+export type DashboardUser = {
   id: number;
-  x?: number;
-  y?: number;
+  email: string;
+  tribe_id: number;
+  tribe_name: string;
+  is_superuser: boolean;
 };
 
-export type VillageOut = {
+export type DashboardVillage = {
   id: number;
   name: string;
   population: number;
-  tile: MapTileOut;
+  tile_id: number;
+  x: number | null;
+  y: number | null;
+  production: ResourceMap;
+  resources: ResourceMap;
+  capacities: ResourceMap;
 };
 
-export type ResourceProduction = {
-  resource_type: string;
-  amount_per_hour: number;
-};
-
-export type VillageProductionOut = {
-  village_id: number;
-  village_name: string;
-  production: ResourceProduction[];
-};
-
-export type ResourceBalance = {
-  resource_type: string;
-  amount: number;
-  capacity?: number;
-};
-
-export type VillageResourceOut = {
-  village_id: number;
-  village_name: string;
-  resources: ResourceBalance[];
+export type DashboardOverview = {
+  user: DashboardUser;
+  villages: DashboardVillage[];
+  totals: {
+    villages: number;
+    population: number;
+    production: ResourceMap;
+    resources: ResourceMap;
+  };
 };
 
 export type VillageRow = {
@@ -41,7 +38,7 @@ export type VillageRow = {
   name: string;
   population: number;
   coordinates: string;
-  production: Record<string, number>;
-  resources: Record<string, number>;
-  capacities: Record<string, number>;
+  production: ResourceMap;
+  resources: ResourceMap;
+  capacities: ResourceMap;
 };

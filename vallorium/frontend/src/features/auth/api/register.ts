@@ -1,12 +1,12 @@
 import { api } from "@/lib/api";
 
-import type { RegisterRequest } from "@/features/auth/types/auth";
+import type { AuthResponse, RegisterRequest } from "@/features/auth/types/auth";
 
 export async function register(
   values: RegisterRequest,
   idempotencyKey: string,
-) {
-  const { data } = await api.post(
+): Promise<AuthResponse> {
+  const { data } = await api.post<AuthResponse>(
     "/auth/signup",
     {
       email: values.email,
