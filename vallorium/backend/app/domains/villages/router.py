@@ -6,6 +6,7 @@ from app.db.session import get_db
 import app.domains.villages.service as village_service
 from app.domains.villages.schemas import (
     VillageCreate,
+    VillageNameUpdate,
     VillageOut,
     VillageProductionOut,
     VillageResourceOut,
@@ -60,6 +61,28 @@ def get_my_village(
     Get a specific village owned by the current authenticated user.
     """
     return village_service.get_user_village_by_id(db, village_id, current_user.id)
+
+
+@village_router.patch(
+    "/villages/{village_id}",
+    response_model=VillageOut,
+    response_model_exclude_none=True,
+)
+def update_village_name(
+    village_id: int,
+    payload: VillageNameUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Update the name of a village owned by the current authenticated user.
+    """
+    return village_service.update_village_name(
+        db=db,
+        village_id=village_id,
+        owner_id=current_user.id,
+        name=payload.name,
+    )
 
 
 @village_router.get(
