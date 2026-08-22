@@ -123,7 +123,7 @@ export function HomePage() {
         <Box sx={{ display: { xs: "none", lg: "block" } }}>
           <VillageSidebar village={village} />
         </Box>
-        <VillageFieldMap />
+        <VillageFieldMap villageId={village.id} />
         <VillageStatusPanel village={village} />
       </Box>
     </Container>

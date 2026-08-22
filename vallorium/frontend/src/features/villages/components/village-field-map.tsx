@@ -7,6 +7,7 @@ import { GamePanel } from "@/components/ui/game-panel";
 import { ResourceIcon } from "@/features/villages/components/resource-icon";
 import { resourceMeta } from "@/features/villages/components/resource-meta";
 import styles from "@/features/villages/components/village-field-map.module.css";
+import { useVillageFarms } from "@/features/villages/hooks/use-village-farms";
 import type { ResourceKey } from "@/features/villages/types/village";
 import {
   gameShadows,
@@ -15,33 +16,44 @@ import {
   type GameCssProperties,
 } from "@/theme";
 
+interface VillageFieldMapProps {
+  villageId: number;
+}
+
+interface FieldPosition {
+  farmNumber: number;
+  left: string;
+  top: string;
+}
+
 interface FieldPlot {
   id: number;
+  farmNumber: number;
   resource: ResourceKey;
   level: number;
   left: string;
   top: string;
 }
 
-const plots: FieldPlot[] = [
-  { id: 1, resource: "wood", level: 7, left: "23%", top: "9%" },
-  { id: 2, resource: "crop", level: 7, left: "43%", top: "6%" },
-  { id: 3, resource: "crop", level: 7, left: "63%", top: "10%" },
-  { id: 4, resource: "iron", level: 6, left: "77%", top: "24%" },
-  { id: 5, resource: "iron", level: 5, left: "82%", top: "45%" },
-  { id: 6, resource: "wood", level: 6, left: "75%", top: "66%" },
-  { id: 7, resource: "clay", level: 6, left: "61%", top: "79%" },
-  { id: 8, resource: "clay", level: 6, left: "42%", top: "82%" },
-  { id: 9, resource: "clay", level: 6, left: "23%", top: "76%" },
-  { id: 10, resource: "crop", level: 7, left: "10%", top: "61%" },
-  { id: 11, resource: "crop", level: 7, left: "7%", top: "41%" },
-  { id: 12, resource: "iron", level: 6, left: "11%", top: "22%" },
-  { id: 13, resource: "wood", level: 8, left: "31%", top: "26%" },
-  { id: 14, resource: "clay", level: 8, left: "56%", top: "25%" },
-  { id: 15, resource: "wood", level: 6, left: "68%", top: "43%" },
-  { id: 16, resource: "crop", level: 6, left: "57%", top: "61%" },
-  { id: 17, resource: "iron", level: 6, left: "34%", top: "63%" },
-  { id: 18, resource: "crop", level: 6, left: "20%", top: "46%" },
+const fieldPositions: FieldPosition[] = [
+  { farmNumber: 1, left: "23%", top: "9%" },
+  { farmNumber: 2, left: "43%", top: "6%" },
+  { farmNumber: 3, left: "63%", top: "10%" },
+  { farmNumber: 4, left: "77%", top: "24%" },
+  { farmNumber: 5, left: "82%", top: "45%" },
+  { farmNumber: 6, left: "75%", top: "66%" },
+  { farmNumber: 7, left: "61%", top: "79%" },
+  { farmNumber: 8, left: "42%", top: "82%" },
+  { farmNumber: 9, left: "23%", top: "76%" },
+  { farmNumber: 10, left: "10%", top: "61%" },
+  { farmNumber: 11, left: "7%", top: "41%" },
+  { farmNumber: 12, left: "11%", top: "22%" },
+  { farmNumber: 13, left: "31%", top: "26%" },
+  { farmNumber: 14, left: "56%", top: "25%" },
+  { farmNumber: 15, left: "68%", top: "43%" },
+  { farmNumber: 16, left: "57%", top: "61%" },
+  { farmNumber: 17, left: "34%", top: "63%" },
+  { farmNumber: 18, left: "20%", top: "46%" },
 ];
 
 const mapVariables: GameCssProperties = {
@@ -67,15 +79,67 @@ const mapVariables: GameCssProperties = {
   "--game-motion-quick": gameTokens.motion.quick,
 };
 
-export function VillageFieldMap() {
-  const [selected, setSelected] = useState<FieldPlot>(plots[12]);
+export function VillageFieldMap({
+  villageId,
+}: VillageFieldMapProps) {
+  const [selectedFarmNumber, setSelectedFarmNumber] = useState(13);
+
+  const {
+    data: farms = [],
+    isLoading,
+    isError,
+  } = useVillageFarms(villageId);
+
+  const farmsByNumber = new Map(
+    farms.map((farm) => [farm.farm_number, farm]),
+  );
+
+  const plots: FieldPlot[] = fieldPositions.flatMap((position) => {
+    const farm = farmsByNumber.get(position.farmNumber);
+
+    if (!farm) {
+      return [];
+    }
+
+    return [
+      {
+        id: farm.id,
+        farmNumber: farm.farm_number,
+        resource: farm.resource_type.name.toLowerCase() as ResourceKey,
+        level: farm.level,
+        left: position.left,
+        top: position.top,
+      },
+    ];
+  });
+
+  const selected =
+    plots.find((plot) => plot.farmNumber === selectedFarmNumber) ??
+    plots[0];
+
+  if (isLoading) {
+    return (
+      <GamePanel className={styles.mapPanel} style={mapVariables}>
+        <Typography>Loading village fields...</Typography>
+      </GamePanel>
+    );
+  }
+
+  if (isError || !selected) {
+    return (
+      <GamePanel className={styles.mapPanel} style={mapVariables}>
+        <Typography>Unable to load village fields.</Typography>
+      </GamePanel>
+    );
+  }
 
   return (
     <GamePanel className={styles.mapPanel} style={mapVariables}>
       <Box className={styles.world}>
         {plots.map((plot) => {
-          const isSelected = selected.id === plot.id;
+          const isSelected = selected.farmNumber === plot.farmNumber;
           const meta = resourceMeta[plot.resource];
+
           return (
             <Box
               component="button"
@@ -83,7 +147,7 @@ export function VillageFieldMap() {
               className={styles.plot}
               key={plot.id}
               aria-label={`${meta.label} field level ${plot.level}`}
-              onClick={() => setSelected(plot)}
+              onClick={() => setSelectedFarmNumber(plot.farmNumber)}
               style={
                 {
                   "--plot-left": plot.left,
@@ -95,7 +159,10 @@ export function VillageFieldMap() {
                 } as GameCssProperties
               }
             >
-              <ResourceIcon resource={plot.resource} size={isSelected ? 60 : 54} />
+              <ResourceIcon
+                resource={plot.resource}
+                size={isSelected ? 60 : 54}
+              />
               <Box className={styles.levelBadge}>{plot.level}</Box>
             </Box>
           );
@@ -129,13 +196,15 @@ export function VillageFieldMap() {
           <ResourceIcon resource={selected.resource} size={42} soft />
           <Box>
             <Typography fontWeight={gameTokens.typography.weight.heavy}>
-              {resourceMeta[selected.resource].label} field · Level {selected.level}
+              {resourceMeta[selected.resource].label} field · Level{" "}
+              {selected.level}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Next level adds +{selected.level * 8 + 34}/h production
             </Typography>
           </Box>
         </Stack>
+
         <Button variant="contained" startIcon={<ArrowUpwardRoundedIcon />}>
           Upgrade to {selected.level + 1}
         </Button>
