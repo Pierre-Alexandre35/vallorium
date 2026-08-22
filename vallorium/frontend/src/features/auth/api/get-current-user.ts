@@ -1,7 +1,7 @@
 import axios from "axios";
 
 import type { AuthResponse, AuthUser } from "@/features/auth/types/auth";
-import { api } from "@/lib/api";
+import { api } from "@/api/client";
 
 export async function getCurrentUser(signal?: AbortSignal): Promise<AuthUser | null> {
   try {

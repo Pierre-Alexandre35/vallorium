@@ -1,45 +1,87 @@
 import { Card, CardContent, Grid, Typography } from "@mui/material";
-import type { VillageRow } from "../types/village";
+
+import type {
+  ResourceKey,
+  VillageRow,
+} from "@/features/villages/types/village";
 import { gameTokens } from "@/theme";
 
 type Props = {
   villages: VillageRow[];
 };
 
-function sum(
+type ResourceSource = "production" | "resources";
+
+function sumResource(
   villages: VillageRow[],
-  key: string,
-  source: "production" | "resources",
-) {
+  resource: ResourceKey,
+  source: ResourceSource,
+): number {
   return villages.reduce(
-    (total, village) => total + (village[source][key] ?? 0),
+    (total, village) => total + village[source][resource],
     0,
   );
 }
 
-const cardItems = (villages: VillageRow[]) => [
-  { label: "Villages", value: villages.length },
-  {
-    label: "Total population",
-    value: villages.reduce((acc, village) => acc + village.population, 0),
-  },
-  { label: "Wood / h", value: sum(villages, "wood", "production") },
-  { label: "Clay / h", value: sum(villages, "clay", "production") },
-  { label: "Iron / h", value: sum(villages, "iron", "production") },
-  { label: "Corn / h", value: sum(villages, "corn", "production") },
-];
+function cardItems(villages: VillageRow[]) {
+  return [
+    {
+      label: "Villages",
+      value: villages.length,
+    },
+    {
+      label: "Total population",
+      value: villages.reduce(
+        (total, village) => total + village.population,
+        0,
+      ),
+    },
+    {
+      label: "Wood / h",
+      value: sumResource(villages, "wood", "production"),
+    },
+    {
+      label: "Clay / h",
+      value: sumResource(villages, "clay", "production"),
+    },
+    {
+      label: "Iron / h",
+      value: sumResource(villages, "iron", "production"),
+    },
+    {
+      label: "Crop / h",
+      value: sumResource(villages, "crop", "production"),
+    },
+  ];
+}
 
 export function VillageSummaryCards({ villages }: Props) {
+  const items = cardItems(villages);
+
   return (
     <Grid container spacing={2}>
-      {cardItems(villages).map((item) => (
-        <Grid key={item.label} size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
-          <Card variant="outlined" sx={{ height: "100%" }}>
+      {items.map((item) => (
+        <Grid
+          key={item.label}
+          size={{ xs: 12, sm: 6, md: 4, lg: 2 }}
+        >
+          <Card
+            variant="outlined"
+            sx={{ height: "100%" }}
+          >
             <CardContent>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                gutterBottom
+              >
                 {item.label}
               </Typography>
-              <Typography variant="h6" fontWeight={gameTokens.typography.weight.medium}>
+
+              <Typography
+                variant="h6"
+                fontWeight={gameTokens.typography.weight.medium}
+              >
                 {item.value}
               </Typography>
             </CardContent>

@@ -1,4 +1,4 @@
-import { api } from "@/lib/api";
+import { api } from "@/api/client";
 
 import type { AuthResponse, LoginFormValues } from "@/features/auth/types/auth";
 
