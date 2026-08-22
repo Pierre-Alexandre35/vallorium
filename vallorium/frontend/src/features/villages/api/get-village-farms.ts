@@ -1,4 +1,4 @@
-import { api } from "@/lib/api";
+import { api } from "@/api/client";
 import type { VillageFarm } from "@/features/villages/types/village";
 
 export async function getVillageFarms(

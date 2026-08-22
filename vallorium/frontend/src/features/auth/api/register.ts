@@ -1,4 +1,4 @@
-import { api } from "@/lib/api";
+import { api } from "@/api/client";
 
 import type { AuthResponse, RegisterRequest } from "@/features/auth/types/auth";
 
