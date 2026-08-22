@@ -1,0 +1,82 @@
+.mapPanel:global(.MuiPaper-root) {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  padding: 8px;
+  background: transparent;
+}
+
+.world {
+  position: relative;
+  width: 100%;
+  max-width: var(--village-map-max-width);
+  aspect-ratio: 1 / 1;
+  margin-inline: auto;
+  overflow: hidden;
+  border: 1px solid var(--village-map-border);
+  border-radius: 50%;
+  background: var(--farm-map-ground);
+  box-shadow: var(--village-map-shadow);
+  isolation: isolate;
+}
+
+.world::after {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 38% 24%, rgba(255, 255, 255, 0.2), transparent 25%),
+    radial-gradient(circle at 50% 50%, transparent 66%, rgba(45, 63, 36, 0.13) 100%);
+  mix-blend-mode: soft-light;
+}
+
+.villageCenter {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  width: 104px;
+  height: 104px;
+  transform: translate(-50%, -50%);
+  place-items: center;
+  color: var(--village-center-color);
+  text-align: center;
+  border: 6px double var(--village-center-border);
+  border-radius: 46% 52% 48% 50%;
+  background: var(--village-center-background);
+  box-shadow: var(--village-center-shadow);
+}
+
+.selectionPanel {
+  padding: 12px;
+  border: 1px solid var(--village-selection-border);
+  border-radius: 42px;
+  background-color: var(--village-selection-background);
+  box-shadow: var(--village-selection-shadow);
+  backdrop-filter: blur(8px);
+}
+
+@media (min-width: 600px) {
+  .mapPanel:global(.MuiPaper-root) {
+    padding: 16px;
+  }
+
+  .villageCenter {
+    width: 126px;
+    height: 126px;
+  }
+}
+
+@media (min-width: 900px) {
+  .selectionPanel {
+    position: absolute;
+    z-index: 8;
+    right: 22px;
+    bottom: 18px;
+    left: 22px;
+  }
+}

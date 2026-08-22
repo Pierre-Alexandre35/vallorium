@@ -1,14 +1,22 @@
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
-import { Box, IconButton, LinearProgress, Stack, Tooltip, Typography } from "@mui/material";
+import {
+  Box,
+  IconButton,
+  LinearProgress,
+  Stack,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 
 import { GamePanel } from "@/components/ui/game-panel";
-import { ResourceIcon } from "@/features/villages/components/resource-icon";
-import { resourceMeta } from "@/features/villages/components/resource-meta";
+import { ResourceIcon } from "@/features/villages/components/resources/resource-icon";
+import {
+  resourceKeys,
+  resourceMeta,
+} from "@/features/villages/config/resource-meta";
 import { useLiveResources } from "@/features/villages/hooks/use-live-resources";
-import type { ResourceKey, VillageRow } from "@/features/villages/types/village";
+import type { VillageRow } from "@/features/villages/types/village";
 import { gameTokens } from "@/theme";
-
-const resources: ResourceKey[] = ["wood", "clay", "iron", "crop"];
 
 function formatAmount(value: number) {
   return Math.floor(value).toLocaleString();
@@ -30,7 +38,7 @@ export function ResourceBar({ village }: { village: VillageRow }) {
         bgcolor: gameTokens.colors.overlay.paper92,
       }}
     >
-      {resources.map((resource) => {
+      {resourceKeys.map((resource) => {
         const amount = liveResources[resource] ?? 0;
         const capacity = village.capacities[resource] ?? 1;
         const percent = Math.min(100, (amount / capacity) * 100);
@@ -81,7 +89,10 @@ export function ResourceBar({ village }: { village: VillageRow }) {
               />
               <Typography
                 variant="caption"
-                sx={{ color: meta.color, fontWeight: gameTokens.typography.weight.strong }}
+                sx={{
+                  color: meta.color,
+                  fontWeight: gameTokens.typography.weight.strong,
+                }}
               >
                 +{formatAmount(village.production[resource] ?? 0)}/h
               </Typography>
@@ -89,7 +100,11 @@ export function ResourceBar({ village }: { village: VillageRow }) {
             <Tooltip title={`Buy more ${meta.label.toLowerCase()}`}>
               <IconButton
                 size="small"
-                sx={{ width: 28, height: 28, bgcolor: gameTokens.colors.overlay.black035 }}
+                sx={{
+                  width: 28,
+                  height: 28,
+                  bgcolor: gameTokens.colors.overlay.black035,
+                }}
               >
                 <AddRoundedIcon sx={{ fontSize: 17 }} />
               </IconButton>

@@ -1,0 +1,78 @@
+.terrain {
+  position: absolute;
+  z-index: 1;
+  inset: 1.5%;
+  width: 97%;
+  height: 97%;
+  pointer-events: auto;
+  filter: drop-shadow(0 10px 18px rgba(65, 77, 47, 0.14));
+}
+
+.outerGround {
+  fill: var(--farm-map-ground);
+  stroke: rgba(57, 80, 43, 0.55);
+  stroke-width: 1.15;
+}
+
+.segment {
+  pointer-events: all;
+  cursor: pointer;
+  stroke: rgba(255, 248, 225, 0.34);
+  stroke-width: 0.28;
+  transition:
+    filter var(--game-motion-quick),
+    stroke var(--game-motion-quick),
+    stroke-width var(--game-motion-quick);
+}
+
+.segment:hover {
+  filter: brightness(1.05) saturate(1.03);
+}
+
+.segment[data-selected="true"] {
+  filter: brightness(1.09) saturate(1.06);
+  stroke: rgba(255, 251, 235, 0.92);
+  stroke-width: 0.72;
+}
+
+.outerGround,
+.outerEdge,
+.ringDivider,
+.centerRoad,
+.centerGround {
+  pointer-events: none;
+}
+
+.outerEdge,
+.ringDivider,
+.centerRoad {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.outerEdge {
+  stroke: rgba(58, 79, 43, 0.56);
+  stroke-width: 4.5;
+}
+
+.ringDivider {
+  stroke: rgba(112, 91, 55, 0.35);
+  stroke-width: 2.2;
+}
+
+.centerRoad {
+  fill: var(--farm-map-road);
+  stroke: var(--farm-map-road-border);
+  stroke-width: 4.2;
+}
+
+.centerGround {
+  stroke: rgba(126, 96, 50, 0.48);
+  stroke-width: 0.75;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .segment {
+    transition: none;
+  }
+}

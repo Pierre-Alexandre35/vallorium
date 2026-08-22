@@ -1,0 +1,173 @@
+.plot {
+  position: absolute;
+  z-index: 4;
+  left: var(--farm-left);
+  top: var(--farm-top);
+  display: grid;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  place-items: center;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  transition:
+    transform var(--game-motion-quick),
+    filter var(--game-motion-quick);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.iconSurface {
+  position: relative;
+  display: grid;
+  width: 39px;
+  height: 39px;
+  place-items: center;
+  color: var(--farm-color);
+  border: 1px solid rgba(255, 253, 245, 0.9);
+  border-radius: 40% 46% 42% 48%;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(249, 244, 226, 0.82));
+  box-shadow:
+    0 5px 11px rgba(56, 52, 38, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    inset 0 -2px 4px rgba(82, 72, 48, 0.08);
+  transition:
+    border-color var(--game-motion-quick),
+    box-shadow var(--game-motion-quick),
+    background var(--game-motion-quick);
+}
+
+.iconSurface::after {
+  position: absolute;
+  inset: 4px;
+  content: "";
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--farm-color) 24%, transparent);
+  border-radius: 38% 44% 40% 46%;
+}
+
+.icon {
+  position: relative;
+  z-index: 1;
+  font-size: 25px !important;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.9));
+}
+
+.levelBadge {
+  position: absolute;
+  z-index: 2;
+  right: -3px;
+  bottom: -2px;
+  display: grid;
+  min-width: 20px;
+  height: 18px;
+  padding-inline: 4px;
+  place-items: center;
+  color: var(--farm-marker-text);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  border: 1px solid rgba(255, 253, 245, 0.96);
+  border-radius: 9px;
+  background: var(--farm-marker-surface);
+  box-shadow: 0 2px 5px rgba(48, 43, 31, 0.2);
+  transition:
+    color var(--game-motion-quick),
+    background-color var(--game-motion-quick),
+    transform var(--game-motion-quick);
+}
+
+.plot:hover {
+  z-index: 6;
+  transform: translate(-50%, -50%) translateY(-2px) scale(1.06);
+}
+
+.plot:hover .iconSurface {
+  border-color: color-mix(in srgb, var(--farm-color) 54%, white);
+  box-shadow:
+    0 8px 15px rgba(56, 52, 38, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98);
+}
+
+.plot:focus-visible {
+  outline: none;
+}
+
+.plot:focus-visible .iconSurface {
+  box-shadow:
+    0 0 0 2px var(--farm-marker-surface),
+    0 0 0 5px var(--farm-color),
+    0 8px 15px rgba(56, 52, 38, 0.22);
+}
+
+.plot[data-selected="true"] {
+  z-index: 7;
+  transform: translate(-50%, -50%) translateY(-2px) scale(1.09);
+}
+
+.plot[data-selected="true"] .iconSurface {
+  color: var(--farm-marker-surface);
+  border-color: rgba(255, 253, 248, 0.92);
+  background: var(--farm-color);
+  box-shadow:
+    0 0 0 2px rgba(255, 253, 248, 0.92),
+    0 0 0 4px color-mix(in srgb, var(--farm-color) 82%, transparent),
+    0 9px 17px rgba(53, 48, 34, 0.25);
+}
+
+.plot[data-selected="true"] .iconSurface::after {
+  border-color: rgba(255, 255, 255, 0.34);
+}
+
+.plot[data-selected="true"] .levelBadge {
+  color: var(--farm-color);
+  transform: translate(1px, 1px);
+}
+
+@media (min-width: 600px) {
+  .plot {
+    width: 49px;
+    height: 49px;
+  }
+
+  .iconSurface {
+    width: 44px;
+    height: 44px;
+  }
+
+  .icon {
+    font-size: 28px !important;
+  }
+
+  .levelBadge {
+    min-width: 21px;
+    height: 19px;
+    font-size: 11px;
+  }
+}
+
+@media (min-width: 900px) {
+  .plot {
+    width: 52px;
+    height: 52px;
+  }
+
+  .iconSurface {
+    width: 46px;
+    height: 46px;
+  }
+
+  .icon {
+    font-size: 29px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plot,
+  .iconSurface,
+  .levelBadge {
+    transition: none;
+  }
+}
