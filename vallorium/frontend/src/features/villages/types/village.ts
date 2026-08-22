@@ -42,3 +42,19 @@ export type VillageRow = {
   resources: ResourceMap;
   capacities: ResourceMap;
 };
+
+export type VillageNameUpdate = {
+  name: string
+}
+
+export type Village = {
+  id: number;
+  name: string;
+  population: number;
+  tile: {
+    id: number;
+    x: number;
+    y: number;
+    is_constructible: boolean;
+  };
+};
