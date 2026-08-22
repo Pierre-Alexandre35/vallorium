@@ -382,3 +382,27 @@ def insert_farm_upgrade(
 
     db_sess.add(upgrade)
     return upgrade
+
+
+def get_owned_farm_plots(
+    db_sess: Session,
+    *,
+    village_id: int,
+    owner_id: int,
+) -> list[db.VillageFarmPlot]:
+    return (
+        db_sess.query(db.VillageFarmPlot)
+        .join(
+            db.Village,
+            db.Village.id == db.VillageFarmPlot.village_id,
+        )
+        .options(
+            joinedload(db.VillageFarmPlot.resource_type),
+        )
+        .filter(
+            db.VillageFarmPlot.village_id == village_id,
+            db.Village.owner_id == owner_id,
+        )
+        .order_by(db.VillageFarmPlot.farm_number)
+        .all()
+    )
