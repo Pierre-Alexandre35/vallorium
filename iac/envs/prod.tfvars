@@ -1,4 +1,4 @@
-project       = "vallorium"
+project       = "travian-prod-1234"
 region        = "europe-west9"
 service_name  = "api"
 repository_id = "api"            # must match Artifact Registry repo in CI

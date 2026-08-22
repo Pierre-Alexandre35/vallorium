@@ -1,8 +1,9 @@
 output "github_provider_resource" {
-  description = "Full WIF provider resource name to use in GitHub secret"
+  description = "Full Workload Identity Provider resource name for google-github-actions/auth"
   value       = google_iam_workload_identity_pool_provider.github.name
 }
 
-output "github_pool_id" {
-  value = google_iam_workload_identity_pool.github.name
+output "github_pool_name" {
+  description = "Full Workload Identity Pool resource name used in principalSet IAM bindings"
+  value       = google_iam_workload_identity_pool.github.name
 }
