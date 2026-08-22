@@ -15,6 +15,7 @@ import { ResourceBar } from "@/features/villages/components/resource-bar";
 import { VillageFieldMap } from "@/features/villages/components/village-field-map";
 import { VillageSidebar } from "@/features/villages/components/village-sidebar";
 import { VillageStatusPanel } from "@/features/villages/components/village-status-panel";
+import { EditableVillageName } from "@/features/villages/components/editable-village-name";
 import { useHomeData } from "@/features/villages/hooks/use-home-data";
 import { gameTokens } from "@/theme";
 
@@ -89,7 +90,10 @@ export function HomePage() {
         sx={{ mb: 2 }}
       >
         <Box>
-          <Typography variant="h4">{village.name}</Typography>
+          <EditableVillageName
+  villageId={village.id}
+  name={village.name}
+/>
           <Typography color="text.secondary" sx={{ mt: 0.35 }}>
             {query.data.user.tribe_name} village
           </Typography>

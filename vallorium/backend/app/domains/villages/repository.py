@@ -1,7 +1,7 @@
 from csv import Error
 from typing import Sequence, Optional, List
 from sqlalchemy.orm import Session, joinedload, selectinload
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, select
 import app.db.models as db
 from collections import defaultdict
 from datetime import datetime
@@ -197,6 +197,35 @@ def get_village_by_name_and_owner(
         )
         .one_or_none()
     )
+
+
+def village_name_exists_for_owner(
+    db_sess: Session,
+    *,
+    owner_id: int,
+    village_name: str,
+    exclude_village_id: Optional[int] = None,
+) -> bool:
+    stmt = select(db.Village.id).where(
+        db.Village.owner_id == owner_id,
+        db.Village.name.ilike(village_name),
+    )
+
+    if exclude_village_id is not None:
+        stmt = stmt.where(db.Village.id != exclude_village_id)
+
+    return db_sess.scalar(stmt) is not None
+
+
+def update_village_name(
+    db_sess: Session,
+    *,
+    village: db.Village,
+    name: str,
+) -> db.Village:
+    village.name = name
+    db_sess.flush()
+    return village
 
 
 def get_village_production_by_village_ids(

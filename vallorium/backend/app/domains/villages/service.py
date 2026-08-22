@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 
 from app.domains.resources.schemas import ResourceProduction, ResourceBalance
@@ -7,6 +8,7 @@ from app.domains.villages.schemas import (
     VillageProductionOut,
     VillageResourceOut,
     VillageCreate,
+    VillageNameOut,
     FarmUpgradeOut,
 )
 import app.domains.villages.repository as village_repo
@@ -138,6 +140,67 @@ def get_user_village_by_name(db: Session, name: str, owner_id: int) -> Village:
             detail="Village not found or unauthorized",
         )
     return village
+
+
+def update_village_name(
+    db: Session,
+    *,
+    village_id: int,
+    owner_id: int,
+    name: str,
+) -> VillageNameOut:
+    try:
+        village = get_user_village_by_id(
+            db=db,
+            village_id=village_id,
+            owner_id=owner_id,
+        )
+
+        if village.name == name:
+            return VillageNameOut(
+                id=village.id,
+                name=village.name,
+            )
+
+        if village_repo.village_name_exists_for_owner(
+            db,
+            owner_id=owner_id,
+            village_name=name,
+            exclude_village_id=village_id,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="You already have a village with this name.",
+            )
+
+        village_repo.update_village_name(
+            db,
+            village=village,
+            name=name,
+        )
+
+        response = VillageNameOut(
+            id=village.id,
+            name=name,
+        )
+
+        db.commit()
+        return response
+
+    except HTTPException:
+        db.rollback()
+        raise
+
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You already have a village with this name.",
+        ) from exc
+
+    except Exception:
+        db.rollback()
+        raise
 
 
 def get_village_production_summary(
