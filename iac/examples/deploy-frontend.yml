@@ -1,0 +1,71 @@
+name: Deploy Frontend to GCS
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PROJECT_ID: travian-prod-1234
+  GCS_BUCKET: vallorium.online
+  FRONTEND_DIR: vallorium/frontend
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: vallorium/frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: npm run build
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_FRONTEND_SERVICE_ACCOUNT }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Verify target bucket
+        run: |
+          gcloud storage buckets describe \
+            "gs://${{ env.GCS_BUCKET }}" \
+            --project="${{ env.PROJECT_ID }}"
+
+      - name: Deploy frontend to GCS
+        run: |
+          gcloud storage rsync \
+            "${{ env.FRONTEND_DIR }}/dist" \
+            "gs://${{ env.GCS_BUCKET }}" \
+            --recursive \
+            --delete-unmatched-destination-objects

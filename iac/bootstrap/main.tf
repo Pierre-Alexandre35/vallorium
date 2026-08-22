@@ -1,5 +1,6 @@
 terraform {
   required_version = ">= 1.6"
+
   required_providers {
     google = {
       source  = "hashicorp/google"
@@ -20,11 +21,9 @@ module "apis" {
 }
 
 module "github_wif" {
-  source  = "../modules/github_wif"
-  project = var.project
-}
+  source            = "../modules/github_wif"
+  project           = var.project
+  github_repository = var.github_repository
 
-output "enabled_apis" {
-  value = sort(tolist(var.apis))
+  depends_on = [module.apis]
 }
-

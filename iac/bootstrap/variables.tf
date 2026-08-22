@@ -4,18 +4,29 @@ variable "project" {
 }
 
 variable "region" {
-  description = "Region"
+  description = "Default GCP region"
   type        = string
   default     = "europe-west9"
 }
 
+variable "github_repository" {
+  description = "GitHub repository allowed to authenticate through Workload Identity Federation"
+  type        = string
+}
+
+variable "frontend_bucket" {
+  description = "Existing Cloud Storage bucket used to host the frontend"
+  type        = string
+}
+
 variable "apis" {
-  description = "List of APIs to enable"
+  description = "Google APIs required by the GitHub Workload Identity Federation setup"
   type        = set(string)
   default = [
-    "run.googleapis.com",
-    "artifactregistry.googleapis.com",
-    "secretmanager.googleapis.com",
-    "iamcredentials.googleapis.com"
+    "cloudresourcemanager.googleapis.com",
+    "iam.googleapis.com",
+    "iamcredentials.googleapis.com",
+    "sts.googleapis.com",
+    "storage.googleapis.com",
   ]
 }
