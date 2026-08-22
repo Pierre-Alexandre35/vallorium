@@ -3,16 +3,25 @@ import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import ConstructionRoundedIcon from "@mui/icons-material/ConstructionRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
-import { Box, Button, Chip, Divider, LinearProgress, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Chip,
+  Divider,
+  LinearProgress,
+  Stack,
+  Typography,
+} from "@mui/material";
 
 import { GamePanel } from "@/components/ui/game-panel";
 import { IconTile } from "@/components/ui/icon-tile";
-import { ResourceIcon } from "@/features/villages/components/resource-icon";
-import { resourceMeta } from "@/features/villages/components/resource-meta";
-import type { ResourceKey, VillageRow } from "@/features/villages/types/village";
+import { ResourceIcon } from "@/features/villages/components/resources/resource-icon";
+import {
+  resourceKeys,
+  resourceMeta,
+} from "@/features/villages/config/resource-meta";
+import type { VillageRow } from "@/features/villages/types/village";
 import { gameTokens } from "@/theme";
-
-const resources: ResourceKey[] = ["wood", "clay", "iron", "crop"];
 
 export function VillageStatusPanel({ village }: { village: VillageRow }) {
   return (
@@ -28,7 +37,7 @@ export function VillageStatusPanel({ village }: { village: VillageRow }) {
           <Chip label="Balanced" size="small" color="primary" variant="outlined" />
         </Stack>
         <Stack spacing={1.35} sx={{ mt: 2 }}>
-          {resources.map((resource) => (
+          {resourceKeys.map((resource) => (
             <Stack key={resource} direction="row" alignItems="center" spacing={1.2}>
               <ResourceIcon resource={resource} size={34} soft />
               <Typography variant="body2" color="text.secondary" flex={1}>

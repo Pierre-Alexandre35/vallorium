@@ -1,6 +1,6 @@
 import { Box } from "@mui/material";
 
-import { resourceMeta } from "@/features/villages/components/resource-meta";
+import { resourceMeta } from "@/features/villages/config/resource-meta";
 import type { ResourceKey } from "@/features/villages/types/village";
 import { gameShadows, gameTokens } from "@/theme";
 
@@ -10,7 +10,11 @@ interface ResourceIconProps {
   soft?: boolean;
 }
 
-export function ResourceIcon({ resource, size = 34, soft = false }: ResourceIconProps) {
+export function ResourceIcon({
+  resource,
+  size = 34,
+  soft = false,
+}: ResourceIconProps) {
   const meta = resourceMeta[resource];
   const Icon = meta.Icon;
 
@@ -26,7 +30,9 @@ export function ResourceIcon({ resource, size = 34, soft = false }: ResourceIcon
         color: soft ? meta.color : "common.white",
         bgcolor: soft ? meta.light : meta.color,
         border: "1px solid",
-        borderColor: soft ? `${meta.color}33` : gameTokens.colors.overlay.white50,
+        borderColor: soft
+          ? `${meta.color}33`
+          : gameTokens.colors.overlay.white50,
         boxShadow: soft ? "none" : gameShadows.resourceIcon,
         "& svg": { fontSize: size * 0.56 },
       }}

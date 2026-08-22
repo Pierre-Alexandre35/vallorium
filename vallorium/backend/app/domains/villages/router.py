@@ -12,6 +12,7 @@ from app.domains.villages.schemas import (
     VillageProductionOut,
     VillageResourceOut,
     FarmUpgradeOut,
+    VillageFarmOut
 )
 from app.core.auth import get_current_active_user
 from app.db.models import User
@@ -134,6 +135,22 @@ def get_village_resource_balance(
     Get the current balance of each resource type in a village after accrual.
     """
     return village_service.get_village_resource_balances(
+        db=db,
+        village_id=village_id,
+        owner_id=current_user.id,
+    )
+
+
+@village_router.get(
+    "/villages/{village_id}/farms",
+    response_model=list[VillageFarmOut],
+)
+def get_village_farms(
+    village_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> list[VillageFarmOut]:
+    return village_service.get_village_farms(
         db=db,
         village_id=village_id,
         owner_id=current_user.id,

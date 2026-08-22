@@ -3,7 +3,11 @@ from pydantic import Field, field_validator
 
 from app.common.schemas import AppBaseModel
 from app.domains.map.schemas import MapTileOut
-from app.domains.resources.schemas import ResourceProduction, ResourceBalance
+from app.domains.resources.schemas import (
+    ResourceProduction,
+    ResourceBalance,
+    ResourceTypeOut,
+)
 
 
 class VillageBase(AppBaseModel):
@@ -63,3 +67,10 @@ class FarmUpgradeOut(AppBaseModel):
 
     status: str
     duration_seconds: int
+
+
+class VillageFarmOut(AppBaseModel):
+    id: int
+    farm_number: int
+    level: int
+    resource_type: ResourceTypeOut

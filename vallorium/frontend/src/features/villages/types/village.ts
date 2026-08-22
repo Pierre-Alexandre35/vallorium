@@ -58,3 +58,12 @@ export type Village = {
     is_constructible: boolean;
   };
 };
+
+export type VillageFarm = {
+  id: number;
+  farm_number: number;
+  level: number;
+  resource_type: {
+    name: string;
+  };
+};

@@ -11,8 +11,8 @@ import {
   Typography,
 } from "@mui/material";
 
-import { ResourceBar } from "@/features/villages/components/resource-bar";
-import { VillageFieldMap } from "@/features/villages/components/village-field-map";
+import { ResourceBar } from "@/features/villages/components/resources/resource-bar";
+import { VillageFieldMap } from "@/features/villages/components/fields/village-field-map";
 import { VillageSidebar } from "@/features/villages/components/village-sidebar";
 import { VillageStatusPanel } from "@/features/villages/components/village-status-panel";
 import { EditableVillageName } from "@/features/villages/components/editable-village-name";
@@ -91,9 +91,9 @@ export function HomePage() {
       >
         <Box>
           <EditableVillageName
-  villageId={village.id}
-  name={village.name}
-/>
+            villageId={village.id}
+            name={village.name}
+          />
           <Typography color="text.secondary" sx={{ mt: 0.35 }}>
             {query.data.user.tribe_name} village
           </Typography>
@@ -123,7 +123,7 @@ export function HomePage() {
         <Box sx={{ display: { xs: "none", lg: "block" } }}>
           <VillageSidebar village={village} />
         </Box>
-        <VillageFieldMap />
+        <VillageFieldMap villageId={village.id} />
         <VillageStatusPanel village={village} />
       </Box>
     </Container>

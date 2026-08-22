@@ -16,7 +16,7 @@ import app.domains.resources.repository as resource_repo
 import app.domains.resources.service as resource_service
 
 
-from app.db.models import Village, UpgradeStatus, Resource, MapTile
+from app.db.models import Village, UpgradeStatus, Resource, MapTile, VillageFarmPlot
 
 
 def initialize_village(
@@ -391,3 +391,32 @@ def upgrade_farm_level(
                 "available": exc.available,
             },
         ) from exc
+
+
+def get_village_farms(
+    db: Session,
+    village_id: int,
+    owner_id: int,
+) -> list[VillageFarmPlot]:
+    farms = village_repo.get_owned_farm_plots(
+        db_sess=db,
+        village_id=village_id,
+        owner_id=owner_id,
+    )
+
+    if farms:
+        return farms
+
+    village = village_repo.get_village_by_id(
+        db_sess=db,
+        owner_id=owner_id,
+        village_id=village_id,
+    )
+
+    if village is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Village not found.",
+        )
+
+    return []
