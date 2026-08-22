@@ -6,6 +6,7 @@ from app.db.session import get_db
 import app.domains.villages.service as village_service
 from app.domains.villages.schemas import (
     VillageCreate,
+    VillageNameOut,
     VillageNameUpdate,
     VillageOut,
     VillageProductionOut,
@@ -65,7 +66,7 @@ def get_my_village(
 
 @village_router.patch(
     "/villages/{village_id}",
-    response_model=VillageOut,
+    response_model=VillageNameOut,
     response_model_exclude_none=True,
 )
 def update_village_name(

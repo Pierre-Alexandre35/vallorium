@@ -24,6 +24,11 @@ class VillageNameUpdate(AppBaseModel):
         return value.strip() if isinstance(value, str) else value
 
 
+class VillageNameOut(AppBaseModel):
+    id: int
+    name: str
+
+
 class VillageOut(AppBaseModel):
     id: int
     name: str
