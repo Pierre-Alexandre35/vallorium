@@ -16,8 +16,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PROJECT_ID: travian-4012
-  GCS_BUCKET: vallorium.com
+  PROJECT_ID: travian-prod-1234
+  GCS_BUCKET: vallorium.online
   FRONTEND_DIR: vallorium/frontend
 
 jobs:
@@ -52,6 +52,12 @@ jobs:
         uses: google-github-actions/setup-gcloud@v3
         with:
           project_id: ${{ env.PROJECT_ID }}
+
+      - name: Verify target bucket
+        run: |
+          gcloud storage buckets describe \
+            "gs://${{ env.GCS_BUCKET }}" \
+            --project="${{ env.PROJECT_ID }}"
 
       - name: Deploy frontend to GCS
         run: |
