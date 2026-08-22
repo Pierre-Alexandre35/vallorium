@@ -1,4 +1,4 @@
-name: Deploy to GCS
+name: Deploy Frontend to GCS
 
 on:
   push:
@@ -6,41 +6,57 @@ on:
       - main
       - dev
 
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PROJECT_ID: travian-4012
+  GCS_BUCKET: vallorium.com
+  FRONTEND_DIR: vallorium/frontend
+
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v5
 
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v6
         with:
-          node-version: "18" # Ensure the correct Node.js version
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: vallorium/frontend/package-lock.json
 
       - name: Install dependencies
-        working-directory: vallorium/frontend # Change to frontend directory
-        run: npm install
+        working-directory: ${{ env.FRONTEND_DIR }}
+        run: npm ci
 
-      - name: Build project
-        working-directory: vallorium/frontend # Change to frontend directory
+      - name: Build frontend
+        working-directory: ${{ env.FRONTEND_DIR }}
         run: npm run build
 
-      - name: Authenticate to GCP
-        uses: google-github-actions/auth@v2
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
         with:
-          project_id: "travian-4012"
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.PROJECT_ID }}
 
-      - name: Upload to GCS
+      - name: Deploy frontend to GCS
         run: |
-          gsutil -m rsync -r vallorium/frontend/dist gs://vallorium.com
-
-      - name: Make GCS objects public
-        run: gsutil iam ch allUsers:objectViewer gs://vallorium.com
+          gcloud storage rsync \
+            "${{ env.FRONTEND_DIR }}/dist" \
+            "gs://${{ env.GCS_BUCKET }}" \
+            --recursive \
+            --delete-unmatched-destination-objects
