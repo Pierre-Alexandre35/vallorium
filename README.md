@@ -1,17 +1,33 @@
 # Vallorium
 
-**Vallorium** is a persistent, browser-based multiplayer strategy game inspired by [Travian](https://www.travian.com/).
-
 <p align="center">
   <a href="https://vallorium.com/">
     <img src="docs/img/vallorium_gameplay_2.png" alt="Vallorium Gameplay" width="60%" />
   </a>
 </p>
 
-### 🌐 [Play Vallorium »](https://vallorium.com/)
+**Vallorium** is a persistent, browser-based multiplayer strategy game inspired by [Travian](https://www.travian.com/).
 
-Each player selects a tribe — **Romans, Gauls, or Teutons** — and starts with a single village.
 
+<p align="center">
+  <a href="https://vallorium.com/">
+    <img src="docs/img/gameplay_1.png" alt="Vallorium Gameplay" width="60%" />
+  </a>
+</p>
+
+
+<p align="center">
+  <a href="https://vallorium.com/">
+    <img src="docs/img/gameplay_2.png" alt="Vallorium Gameplay" width="60%" />
+  </a>
+</p>
+
+
+<p align="center">
+  <a href="https://vallorium.com/">
+    <img src="docs/img/gameplay_3.png" alt="Vallorium Gameplay" width="60%" />
+  </a>
+</p>
 A village contains 18 resource fields producing four resources:
 
 * 🌾 Crop
