@@ -15,6 +15,7 @@ resource "google_service_account_iam_member" "github_can_impersonate_frontend_de
 resource "google_project_iam_member" "frontend_deployer" {
   for_each = toset([
     "roles/firebasehosting.admin",
+    "roles/run.viewer",
     "roles/serviceusage.serviceUsageConsumer",
   ])
 

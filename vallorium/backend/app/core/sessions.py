@@ -7,7 +7,7 @@ from app.core.config import SESSION_COOKIE_SECURE
 from app.db.redis import redis_client
 
 
-SESSION_COOKIE_NAME = "session"
+SESSION_COOKIE_NAME = "__session"
 SESSION_TTL_SECONDS = 60 * 60 * 24 * 7
 
 
