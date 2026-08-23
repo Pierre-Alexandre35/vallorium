@@ -1,72 +1,103 @@
 variable "project" {
-  type = string
+  description = "GCP project ID"
+  type        = string
 }
 
 variable "region" {
-  type = string
+  description = "Cloud Run, Memorystore, and Artifact Registry region"
+  type        = string
 }
 
 variable "service_name" {
-  type = string
+  description = "Cloud Run service name"
+  type        = string
 }
 
 variable "repository_id" {
-  type = string
-  # e.g., "backend-repo"
+  description = "Existing Artifact Registry repository ID created by the bootstrap stack"
+  type        = string
 }
 
 variable "image_name" {
-  description = "Name of the Docker image (e.g., fastapi)"
+  description = "Docker image name in Artifact Registry"
   type        = string
 }
 
 variable "image_tag" {
-  type = string
-  # e.g., commit SHA (CI passes this)
+  description = "Immutable Docker image tag. GitHub Actions passes the commit SHA."
+  type        = string
 }
 
 variable "min_instances" {
-  type    = number
-  default = 0
+  description = "Minimum number of Cloud Run instances"
+  type        = number
+  default     = 0
 }
 
 variable "max_instances" {
-  type    = number
-  default = 10
+  description = "Maximum number of Cloud Run instances"
+  type        = number
+  default     = 10
 }
 
 variable "allow_unauth" {
-  type    = bool
-  default = true
+  description = "Allow public HTTP invocation. Application/session authentication still happens inside FastAPI."
+  type        = bool
+  default     = true
 }
 
-variable "service_account_email" {
-  type    = string
-  default = null
-}
-
-variable "create_repo" {
-  type    = bool
-  default = true
-}
-
-variable "database_url" {
+variable "runtime_service_account_email" {
+  description = "Dedicated service account attached to Cloud Run revisions"
   type        = string
-  description = "PostgreSQL database connection string"
 }
 
-variable "celery_broker_url" {
+variable "database_url_secret_id" {
+  description = "Secret Manager secret ID exposed to the container as DATABASE_URL"
   type        = string
-  description = "Redis URL for Celery broker"
 }
 
-variable "secret_key" {
+variable "vpc_network_name" {
+  description = "VPC used by Cloud Run Direct VPC egress and Memorystore"
   type        = string
-  description = "Secret key for application"
+  default     = "vallorium-backend"
 }
 
-variable "debug" {
+variable "vpc_subnet_name" {
+  description = "Subnet used by Cloud Run Direct VPC egress"
   type        = string
-  description = "Enable debug mode"
-  default     = "false"
+  default     = "vallorium-backend-europe-west9"
+}
+
+variable "vpc_subnet_cidr" {
+  description = "CIDR range used by Cloud Run Direct VPC egress"
+  type        = string
+  default     = "10.20.0.0/24"
+}
+
+variable "redis_name" {
+  description = "Memorystore Redis instance name"
+  type        = string
+  default     = "vallorium-redis"
+}
+
+variable "redis_tier" {
+  description = "Memorystore Redis service tier"
+  type        = string
+  default     = "BASIC"
+
+  validation {
+    condition     = contains(["BASIC", "STANDARD_HA"], var.redis_tier)
+    error_message = "redis_tier must be BASIC or STANDARD_HA."
+  }
+}
+
+variable "redis_memory_size_gb" {
+  description = "Memorystore Redis memory in GiB"
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.redis_memory_size_gb >= 1
+    error_message = "redis_memory_size_gb must be at least 1 GiB."
+  }
 }

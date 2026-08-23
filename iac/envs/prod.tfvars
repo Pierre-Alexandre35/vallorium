@@ -1,18 +1,23 @@
 project       = "travian-prod-1234"
 region        = "europe-west9"
 service_name  = "api"
-repository_id = "api"            # must match Artifact Registry repo in CI
-image_name    = "backend"        # must match image name built in CI
-image_tag     = "auto-set by GitHub Action" # <- comes from CI via `-var="image_tag=${{ github.sha }}"`
+repository_id = "api"
+image_name    = "backend"
+
+# GitHub Actions supplies image_tag from the immutable commit SHA:
+#   -var="image_tag=${GITHUB_SHA}"
 
 min_instances = 1
 max_instances = 2
-
 allow_unauth  = true
-create_repo   = true
 
+runtime_service_account_email = "vallorium-backend-runtime@travian-prod-1234.iam.gserviceaccount.com"
+database_url_secret_id        = "vallorium-database-url"
 
-database_url      = "postgresql+psycopg://pierre:password@postgres:5432/pierre"
-celery_broker_url = "redis://redis:6379/0"
-secret_key        = "dev-secret"
-debug             = "true"
+vpc_network_name = "vallorium-backend"
+vpc_subnet_name  = "vallorium-backend-europe-west9"
+vpc_subnet_cidr  = "10.20.0.0/24"
+
+redis_name           = "vallorium-redis"
+redis_tier           = "BASIC"
+redis_memory_size_gb = 1

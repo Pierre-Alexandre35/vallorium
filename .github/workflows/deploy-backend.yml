@@ -1,0 +1,104 @@
+name: Deploy Backend to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "vallorium/backend/**"
+      - "iac/main.tf"
+      - "iac/variables.tf"
+      - "iac/backend.tf"
+      - "iac/redis.tf"
+      - "iac/outputs.tf"
+      - "iac/modules/cloud_run/**"
+      - "iac/envs/prod.tfvars"
+      - "iac/envs/prod.backend.hcl"
+      - ".github/workflows/deploy-backend.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-backend-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PROJECT_ID: travian-prod-1234
+  REGION: europe-west9
+  REPOSITORY_ID: api
+  IMAGE_NAME: backend
+  BACKEND_DIR: vallorium/backend
+  IAC_DIR: iac
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_BACKEND_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud CLI
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker \
+            "${REGION}-docker.pkg.dev" \
+            --quiet
+
+      - name: Build backend image
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            -t "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY_ID}/${IMAGE_NAME}:${GITHUB_SHA}" \
+            "${BACKEND_DIR}"
+
+      - name: Push backend image
+        run: |
+          docker push \
+            "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY_ID}/${IMAGE_NAME}:${GITHUB_SHA}"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        working-directory: ${{ env.IAC_DIR }}
+        run: |
+          terraform init \
+            -input=false \
+            -backend-config=envs/prod.backend.hcl
+
+      - name: Terraform validate
+        working-directory: ${{ env.IAC_DIR }}
+        run: terraform validate
+
+      - name: Terraform plan
+        working-directory: ${{ env.IAC_DIR }}
+        run: |
+          terraform plan \
+            -input=false \
+            -out=tfplan \
+            -var-file=envs/prod.tfvars \
+            -var="image_tag=${GITHUB_SHA}"
+
+      - name: Terraform apply
+        working-directory: ${{ env.IAC_DIR }}
+        run: |
+          terraform apply \
+            -input=false \
+            -auto-approve \
+            tfplan

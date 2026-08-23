@@ -1,2 +1,2 @@
-bucket  = "tfstate-vallorium-eu"
-prefix  = "prod"
+bucket = "travian-prod-1234-tfstate"
+prefix = "tfstate/backend"

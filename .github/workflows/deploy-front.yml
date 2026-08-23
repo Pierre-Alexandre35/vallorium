@@ -1,10 +1,9 @@
-name: Deploy Frontend to GCS
+name: Deploy Frontend to Firebase Hosting
 
 on:
   push:
     branches:
       - main
-      - dev
 
   workflow_dispatch:
 
@@ -18,7 +17,6 @@ concurrency:
 
 env:
   PROJECT_ID: travian-prod-1234
-  GCS_BUCKET: vallorium.online
   FRONTEND_DIR: vallorium/frontend
 
 jobs:
@@ -47,29 +45,14 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
+          project_id: ${{ env.PROJECT_ID }}
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_FRONTEND_SERVICE_ACCOUNT }}
 
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v3
-        with:
-          project_id: ${{ env.PROJECT_ID }}
-
-      - name: Verify Google identity
+      - name: Deploy frontend to Firebase Hosting
+        working-directory: ${{ env.FRONTEND_DIR }}
         run: |
-          gcloud auth list
-          gcloud config get-value project
-
-      - name: Verify target bucket
-        run: |
-          gcloud storage buckets describe \
-            "gs://${{ env.GCS_BUCKET }}" \
-            --project="${{ env.PROJECT_ID }}"
-
-      - name: Deploy frontend to GCS
-        run: |
-          gcloud storage rsync \
-            "${{ env.FRONTEND_DIR }}/dist" \
-            "gs://${{ env.GCS_BUCKET }}" \
-            --recursive \
-            --delete-unmatched-destination-objects
+          npx --yes firebase-tools@15.28.1 deploy \
+            --only hosting \
+            --project "${PROJECT_ID}" \
+            --non-interactive
