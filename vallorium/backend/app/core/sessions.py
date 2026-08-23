@@ -3,7 +3,9 @@ import secrets
 
 from fastapi import Response
 
+from app.core.config import SESSION_COOKIE_SECURE
 from app.db.redis import redis_client
+
 
 SESSION_COOKIE_NAME = "session"
 SESSION_TTL_SECONDS = 60 * 60 * 24 * 7
@@ -11,7 +13,6 @@ SESSION_TTL_SECONDS = 60 * 60 * 24 * 7
 
 def _session_key(session_id: str) -> str:
     digest = hashlib.sha256(session_id.encode("utf-8")).hexdigest()
-
     return f"session:{digest}"
 
 
@@ -52,7 +53,7 @@ def set_session_cookie(
         key=SESSION_COOKIE_NAME,
         value=session_id,
         httponly=True,
-        secure=False,  # localhost only
+        secure=SESSION_COOKIE_SECURE,
         samesite="lax",
         path="/",
         max_age=SESSION_TTL_SECONDS,

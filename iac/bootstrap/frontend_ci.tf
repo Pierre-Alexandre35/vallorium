@@ -10,11 +10,15 @@ resource "google_service_account_iam_member" "github_can_impersonate_frontend_de
   member             = "principalSet://iam.googleapis.com/${module.github_wif.github_pool_name}/attribute.repository/${var.github_repository}"
 }
 
-# gcloud storage rsync needs object read/write/delete/list permissions and
-# storage.buckets.get on the destination bucket. Keep the role scoped to the
-# frontend bucket instead of granting project-wide Storage Admin.
-resource "google_storage_bucket_iam_member" "frontend_deployer" {
-  bucket = var.frontend_bucket
-  role   = "roles/storage.admin"
-  member = "serviceAccount:${google_service_account.frontend_deployer.email}"
+# Firebase Hosting uses project-level IAM roles. Keep the deployer limited to
+# Hosting deployment and service usage instead of broad project roles.
+resource "google_project_iam_member" "frontend_deployer" {
+  for_each = toset([
+    "roles/firebasehosting.admin",
+    "roles/serviceusage.serviceUsageConsumer",
+  ])
+
+  project = var.project
+  role    = each.value
+  member  = "serviceAccount:${google_service_account.frontend_deployer.email}"
 }

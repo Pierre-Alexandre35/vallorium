@@ -12,12 +12,14 @@ variable "service_name" {
 
 variable "repository_id" {
   type = string
-  # e.g., "api"
+}
+
+variable "image_name" {
+  type = string
 }
 
 variable "image_tag" {
   type = string
-  # e.g., commit SHA
 }
 
 variable "min_instances" {
@@ -35,40 +37,27 @@ variable "allow_unauth" {
   default = true
 }
 
-variable "service_account_email" {
-  type    = string
-  default = null
-}
-
-variable "create_repo" {
-  type    = bool
-  default = true
-  # NEW
-}
-
-variable "image_name" {
-  description = "Docker image name in the Artifact Registry repo"
+variable "runtime_service_account_email" {
+  description = "Service identity attached to the Cloud Run service"
   type        = string
 }
 
-
-variable "database_url" {
+variable "database_url_secret_id" {
+  description = "Secret Manager secret ID exposed as DATABASE_URL"
   type        = string
-  description = "PostgreSQL database connection string"
 }
 
-variable "celery_broker_url" {
+variable "redis_url" {
+  description = "Private Memorystore Redis URL exposed as REDIS_URL"
   type        = string
-  description = "Redis URL for Celery broker"
 }
 
-variable "secret_key" {
+variable "vpc_network" {
+  description = "VPC network used by Cloud Run Direct VPC egress"
   type        = string
-  description = "Secret key for FastAPI app"
 }
 
-variable "debug" {
+variable "vpc_subnetwork" {
+  description = "VPC subnet used by Cloud Run Direct VPC egress"
   type        = string
-  default     = "false"
-  description = "Set to true to enable debug mode"
 }
