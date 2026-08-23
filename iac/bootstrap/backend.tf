@@ -1,6 +1,6 @@
 terraform {
   backend "gcs" {
-    bucket = "tfstate-vallorium-eu"
+    bucket = "travian-prod-1234-tfstate"
     prefix = "tfstate/bootstrap"
   }
 }
