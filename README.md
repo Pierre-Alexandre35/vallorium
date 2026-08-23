@@ -1,48 +1,49 @@
 # Vallorium
 
+**Game:** https://vallorium.online  
+**Swagger / API docs:** https://vallorium.online/api/docs
+
 <p align="center">
-  <a href="https://vallorium.com/">
+  <a href="https://vallorium.online/">
     <img src="docs/img/vallorium_gameplay_2.png" alt="Vallorium Gameplay" width="60%" />
   </a>
 </p>
 
 **Vallorium** is a persistent, browser-based multiplayer strategy game inspired by [Travian](https://www.travian.com/).
 
-
 <p align="center">
-  <a href="https://vallorium.com/">
+  <a href="https://vallorium.online/">
     <img src="docs/img/gameplay_1.png" alt="Vallorium Gameplay" width="100%" />
   </a>
 </p>
 
-
 <p align="center">
-  <a href="https://vallorium.com/">
+  <a href="https://vallorium.online/">
     <img src="docs/img/gameplay_2.png" alt="Vallorium Gameplay" width="100%" />
   </a>
 </p>
 
-
 <p align="center">
-  <a href="https://vallorium.com/">
+  <a href="https://vallorium.online/">
     <img src="docs/img/gameplay_3.png" alt="Vallorium Gameplay" width="100%" />
   </a>
 </p>
+
 A village contains 18 resource fields producing four resources:
 
-* 🌾 Crop
-* ⛓️ Iron
-* 🪵 Wood
-* 🧱 Clay
+- 🌾 Crop
+- ⛓️ Iron
+- 🪵 Wood
+- 🧱 Clay
 
 Resource fields can be upgraded to increase production. Players can also build, upgrade, and demolish structures in their village as their economy and strategy evolve.
 
 Expansion is a major part of the game. Players can:
 
-* Found new villages on unclaimed land
-* Build armies with tribe-specific units
-* Attack other players
-* Conquer enemy villages
+- Found new villages on unclaimed land
+- Build armies with tribe-specific units
+- Attack other players
+- Conquer enemy villages
 
 ---
 
@@ -52,8 +53,8 @@ Expansion is a major part of the game. Players can:
 
 Make sure you have:
 
-* Docker
-* Docker Compose
+- Docker
+- Docker Compose
 
 From the repository:
 
@@ -75,28 +76,58 @@ docker compose up
 
 The initialization process creates the database schema and populates the required reference data.
 
+### Local frontend/API routing
+
+The frontend calls the API through the relative path:
+
+```text
+/api/v1
+```
+
+In production, Firebase Hosting rewrites `/api/**` to the Cloud Run `api` service.
+
+In local development, Vite proxies `/api` to the local FastAPI server:
+
+```text
+Browser → http://localhost:5173/api/v1/...
+        → Vite proxy
+        → http://localhost:8080/api/v1/...
+```
+
+This keeps the Axios configuration identical between local development and production.
+
 ---
 
 ## 🔐 Default Local Credentials
 
 ### Application
 
-* **Email:** `admin@example.com`
-* **Password:** `admin123`
+- **Email:** `admin@example.com`
+- **Password:** `admin123`
 
 ### PostgreSQL
 
-* **Host:** `localhost`
-* **Port:** `5432`
-* **Username:** `pierre`
-* **Password:** `password`
-* **Database:** `pierre`
+- **Host:** `localhost`
+- **Port:** `5432`
+- **Username:** `pierre`
+- **Password:** `password`
+- **Database:** `pierre`
 
 ---
 
 ## 📚 API Documentation
 
-When the backend is running locally, Swagger UI is available at:
+### Production
+
+Swagger UI:
+
+```text
+https://vallorium.online/api/docs
+```
+
+### Local
+
+When the backend is running locally:
 
 ```text
 http://localhost:8080/api/docs
@@ -203,6 +234,398 @@ Apply migration in production
 ```
 
 Migration files should always be committed to Git together with the code that depends on them.
+
+---
+
+# 🚀 Deployment
+
+Vallorium uses **Terraform for infrastructure** and **GitHub Actions for application deployments**.
+
+The production architecture is:
+
+```text
+                         ┌──────────────────────────────┐
+                         │       vallorium.online       │
+                         └──────────────┬───────────────┘
+                                        │
+                                        ▼
+                         ┌──────────────────────────────┐
+                         │       Firebase Hosting       │
+                         │   static frontend + CDN      │
+                         └───────────┬──────────┬───────┘
+                                     │          │
+                              React routes    /api/**
+                                     │          │
+                                     ▼          ▼
+                               index.html   Cloud Run
+                                             service: api
+                                                 │
+                                  ┌──────────────┴──────────────┐
+                                  │                             │
+                                  ▼                             ▼
+                          Neon PostgreSQL             Memorystore Redis
+                          persistent data              sessions/cache
+```
+
+Firebase Hosting provides the public frontend, HTTPS, CDN delivery, and SPA rewrites.
+
+The frontend does **not** know or depend on the generated `*.a.run.app` URL. It calls:
+
+```text
+/api/v1/...
+```
+
+Firebase routes `/api/**` to the stable Cloud Run service name:
+
+```text
+serviceId = api
+region    = europe-west9
+```
+
+This means a new Cloud Run revision can be deployed without changing the frontend configuration.
+
+## Frontend deployment
+
+Workflow:
+
+```text
+.github/workflows/deploy-front.yml
+```
+
+On a frontend deployment:
+
+```text
+GitHub push to main
+        ↓
+npm ci
+        ↓
+npm run build
+        ↓
+Vite creates dist/
+        ↓
+GitHub authenticates to GCP with Workload Identity Federation
+        ↓
+Firebase CLI deploys dist/ + firebase.json
+        ↓
+Firebase Hosting serves the new version
+```
+
+The Firebase routing configuration lives in:
+
+```text
+vallorium/frontend/firebase.json
+```
+
+The important rewrites are conceptually:
+
+```json
+{
+  "rewrites": [
+    {
+      "source": "/api/**",
+      "run": {
+        "serviceId": "api",
+        "region": "europe-west9"
+      }
+    },
+    {
+      "source": "**",
+      "destination": "/index.html"
+    }
+  ]
+}
+```
+
+The `/api/**` rule must come before the SPA catch-all rule.
+
+## Backend deployment
+
+Workflow:
+
+```text
+.github/workflows/deploy-backend.yml
+```
+
+On a backend deployment:
+
+```text
+GitHub push to main
+        ↓
+Authenticate to GCP with Workload Identity Federation
+        ↓
+Build Docker image
+        ↓
+Tag image with the Git commit SHA
+        ↓
+Push image to Artifact Registry
+        ↓
+terraform plan
+        ↓
+terraform apply
+        ↓
+Cloud Run updates service "api"
+        ↓
+Cloud Run creates a new revision using the new image
+```
+
+Images are stored as:
+
+```text
+europe-west9-docker.pkg.dev/travian-prod-1234/api/backend:<git-sha>
+```
+
+Terraform receives the Git SHA from CI:
+
+```text
+image_tag=${GITHUB_SHA}
+```
+
+Therefore, even when only Python code changes, Terraform normally shows an in-place Cloud Run update:
+
+```text
+old image SHA → new image SHA
+```
+
+The VPC, subnet, Redis instance, and other infrastructure remain unchanged unless their Terraform configuration changes.
+
+## Authentication between GitHub and GCP
+
+CI uses **Google Workload Identity Federation (WIF)** rather than long-lived JSON service-account keys.
+
+Two deployer identities are used:
+
+```text
+github-frontend-deployer
+├── Firebase Hosting deployment permissions
+├── Cloud Run Viewer
+└── Service Usage Consumer
+
+github-backend-deployer
+├── Cloud Run Admin
+├── Artifact Registry Writer
+├── Redis Admin
+├── Compute Network Admin
+└── access to backend Terraform state
+```
+
+The frontend deployer only needs read access to Cloud Run so Firebase can validate the `/api/**` rewrite.
+
+## Runtime configuration and secrets
+
+Production configuration is intentionally split by sensitivity:
+
+```text
+DATABASE_URL
+└── Google Secret Manager
+    └── vallorium-database-url
+
+REDIS_URL
+└── generated by Terraform
+    └── redis://<memorystore-private-ip>:6379/0
+
+SESSION_COOKIE_SECURE
+└── Terraform Cloud Run environment variable
+    └── true
+```
+
+Cloud Run uses a dedicated runtime service account:
+
+```text
+vallorium-backend-runtime@travian-prod-1234.iam.gserviceaccount.com
+```
+
+The runtime service account can read the database secret, while CI does not need the database credentials.
+
+The production session cookie is named:
+
+```text
+__session
+```
+
+This name is required for the session cookie to be forwarded through Firebase Hosting to Cloud Run.
+
+## Terraform bootstrap vs application deployment
+
+The Terraform configuration is intentionally split into different responsibilities.
+
+### Bootstrap infrastructure
+
+`iac/bootstrap/` manages long-lived/shared infrastructure such as:
+
+- Google APIs
+- Workload Identity Federation
+- GitHub deployer service accounts
+- IAM permissions
+- Artifact Registry
+- Secret Manager secret containers
+- Backend runtime service account
+
+Bootstrap is applied manually and is **not** automatically changed by normal frontend/backend application deployments.
+
+Typical bootstrap workflow:
+
+```bash
+cd iac/bootstrap
+
+terraform init -reconfigure
+
+terraform plan \
+  -var-file=../envs/prod.bootstrap.tfvars
+
+terraform apply \
+  -var-file=../envs/prod.bootstrap.tfvars
+```
+
+Always review the plan before applying IAM/bootstrap changes.
+
+### Frontend infrastructure
+
+`iac/frontend/` manages the Firebase project/Hosting site itself.
+
+It does **not** upload React application files. Application files are deployed by the frontend GitHub Actions workflow.
+
+### Backend infrastructure
+
+The root `iac/` stack manages runtime backend infrastructure:
+
+- VPC
+- subnet
+- Memorystore Redis
+- Cloud Run service
+- Cloud Run public invoker configuration
+
+Backend CI builds and pushes the Docker image first, then runs Terraform with the new image SHA.
+
+---
+
+# 🧱 Terraform Structure
+
+```text
+iac/
+│
+├── backend.tf
+│   # Root backend Terraform configuration.
+│   # Defines the Terraform backend declaration used with prod.backend.hcl.
+│
+├── main.tf
+│   # Composes the production backend infrastructure.
+│   # Calls the Cloud Run module and connects it to Redis/network resources.
+│
+├── redis.tf
+│   # Creates the backend VPC, regional subnet, and Memorystore Redis instance.
+│   # Redis receives a private IP reachable from Cloud Run through Direct VPC egress.
+│
+├── variables.tf
+│   # Input variables for the root backend stack:
+│   # project, region, image tag, Cloud Run scaling, Redis/VPC configuration, etc.
+│
+├── outputs.tf
+│   # Exposes useful runtime information such as the Cloud Run endpoint,
+│   # service name, Redis host, and Redis port.
+│
+├── bootstrap/
+│   │
+│   ├── backend.tf
+│   │   # Stores bootstrap Terraform state in the dedicated GCS state bucket.
+│   │
+│   ├── main.tf
+│   │   # Enables required APIs and creates the shared GitHub WIF provider.
+│   │
+│   ├── frontend_ci.tf
+│   │   # Creates/configures the frontend GitHub deployer and its Firebase IAM roles.
+│   │
+│   ├── backend_ci.tf
+│   │   # Creates backend deployer/runtime identities, Artifact Registry,
+│   │   # Secret Manager resources, state access, and backend IAM permissions.
+│   │
+│   ├── variables.tf
+│   │   # Bootstrap variables and the list of GCP APIs to enable.
+│   │
+│   └── outputs.tf
+│       # Outputs WIF provider names, deployer service-account emails,
+│       # Artifact Registry repository name, runtime identity, and secret IDs.
+│
+├── frontend/
+│   │
+│   ├── backend.tf
+│   │   # Stores Firebase-stack Terraform state separately from bootstrap/backend state.
+│   │
+│   ├── main.tf
+│   │   # Enables Firebase on the GCP project and creates the Firebase Hosting site.
+│   │
+│   ├── variables.tf
+│   │   # Project, region, and Firebase Hosting site inputs.
+│   │
+│   └── outputs.tf
+│       # Outputs the Firebase Hosting site ID and default *.web.app URL.
+│
+├── envs/
+│   │
+│   ├── prod.bootstrap.tfvars
+│   │   # Production values for the bootstrap stack.
+│   │
+│   ├── prod.frontend.tfvars
+│   │   # Production values for the Firebase Hosting Terraform stack.
+│   │
+│   ├── prod.tfvars
+│   │   # Production values for the root backend/Cloud Run stack.
+│   │
+│   └── prod.backend.hcl
+│       # Backend-state configuration for the root backend Terraform stack.
+│
+├── examples/
+│   │
+│   ├── firebase.json
+│   │   # Reference Firebase Hosting configuration, including SPA and /api rewrites.
+│   │
+│   └── deploy-frontend.yml
+│       # Reference/example frontend GitHub Actions deployment workflow.
+│
+└── modules/
+    │
+    ├── apis/
+    │   ├── main.tf
+    │   └── variables.tf
+    │   # Reusable module for enabling required Google Cloud APIs.
+    │
+    ├── cloud_run/
+    │   ├── main.tf
+    │   ├── variables.tf
+    │   └── outputs.tf
+    │   # Reusable Cloud Run v2 module.
+    │   # Configures the container image, Secret Manager database URL,
+    │   # Redis URL, Direct VPC egress, scaling, and invoker IAM.
+    │
+    └── github_wif/
+        ├── main.tf
+        ├── variables.tf
+        └── outputs.tf
+        # Reusable Workload Identity Federation module.
+        # Restricts GitHub authentication to the configured repository.
+```
+
+## Terraform state
+
+Terraform state is stored remotely in the dedicated GCS bucket:
+
+```text
+travian-prod-1234-tfstate
+```
+
+GCS is used for **Terraform state only**; the frontend itself is hosted by Firebase Hosting.
+
+The stacks use separate state prefixes so that shared IAM/bootstrap infrastructure, Firebase infrastructure, and backend runtime infrastructure remain isolated.
+
+Conceptually:
+
+```text
+travian-prod-1234-tfstate
+├── tfstate/bootstrap
+├── tfstate/frontend
+└── tfstate/backend
+```
+
+Do not delete this bucket while Terraform-managed infrastructure exists.
 
 ---
 
@@ -401,13 +824,18 @@ gh release create v0.5.0 \
 
 # 🛠️ Technologies
 
-* **Backend:** FastAPI
-* **Frontend:** React, Vite, TypeScript, MUI, PixiJS
-* **Database:** PostgreSQL
-* **Database migrations:** Alembic
-* **Infrastructure as Code:** Terraform
-* **Cloud:** Google Cloud Platform
-* **Containers:** Docker / Docker Compose
+- **Backend:** FastAPI
+- **Frontend:** React, Vite, TypeScript, MUI, PixiJS
+- **Database:** PostgreSQL / Neon
+- **Session store:** Redis / Google Cloud Memorystore
+- **Database migrations:** Alembic
+- **Infrastructure as Code:** Terraform
+- **Frontend hosting/CDN:** Firebase Hosting
+- **Backend compute:** Google Cloud Run
+- **Container registry:** Google Artifact Registry
+- **Secrets:** Google Secret Manager
+- **CI/CD:** GitHub Actions + Google Workload Identity Federation
+- **Containers:** Docker / Docker Compose
 
 FastAPI is used for the backend API and PostgreSQL for persistent game data.
 
@@ -417,58 +845,69 @@ Many Vallorium mechanics depend on distance and location — villages, map tiles
 
 # ☁️ Hosting
 
-Vallorium is deployed on **Google Cloud Platform**.
+Vallorium is deployed on **Google Cloud Platform** with Neon providing PostgreSQL.
 
-The infrastructure includes:
+- **Frontend:** Firebase Hosting with built-in CDN and HTTPS
+- **Backend:** FastAPI on Cloud Run (`api`, `europe-west9`)
+- **Database:** Neon PostgreSQL
+- **Sessions / Redis:** Google Cloud Memorystore
+- **Container images:** Google Artifact Registry
+- **Secrets:** Google Secret Manager
+- **Infrastructure:** Terraform
+- **CI/CD:** GitHub Actions authenticated with GCP through Workload Identity Federation
+- **Terraform state:** dedicated Google Cloud Storage bucket
 
-* **Frontend:** static hosting using Google Cloud Storage
-* **Backend:** FastAPI deployed on Google Cloud
-* **Database:** PostgreSQL
-* **Container images:** Google Artifact Registry
-* **Infrastructure:** Terraform
-* **CI/CD:** Google Cloud Build / GitHub
+GCS is no longer used to host the frontend. It is retained only for remote Terraform state.
 
 ---
 
 # 📁 Project Structure
 
 ```text
-📁 Project Structure
-
 .
 ├── README.md
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
-├── cloudbuild.yaml                 # CI/CD pipeline
+├── cloudbuild.yaml
+│
+├── .github/
+│   └── workflows/
+│       ├── deploy-front.yml         # Build Vite and deploy to Firebase Hosting
+│       └── deploy-backend.yml       # Build/push FastAPI image and update Cloud Run with Terraform
 │
 ├── docs/
-│   └── img/                        # Documentation assets
+│   └── img/                         # Documentation assets
 │
-├── iac/                            # Terraform infrastructure
-│   ├── bootstrap/                  # Initial GCP / CI setup
-│   ├── envs/                       # Environment configuration
-│   └── modules/
-│       ├── apis/
-│       ├── cloud_run/
-│       └── github_wif/
+├── iac/                             # Terraform infrastructure
+│   ├── bootstrap/                   # Shared GCP APIs, IAM, WIF, CI identities, registry, secrets
+│   ├── frontend/                    # Firebase project and Hosting site infrastructure
+│   ├── envs/                        # Production Terraform variables/backend configuration
+│   ├── examples/                    # Reference Firebase/CI configurations
+│   ├── modules/
+│   │   ├── apis/                    # Reusable Google API enablement
+│   │   ├── cloud_run/               # Reusable Cloud Run service module
+│   │   └── github_wif/              # Reusable GitHub Workload Identity Federation module
+│   ├── redis.tf                     # VPC, subnet, and Memorystore Redis
+│   └── main.tf                      # Production backend stack composition
 │
-└── vallorium/                      # Application
-    ├── docker-compose.yml          # Local development stack
+└── vallorium/                       # Application
+    ├── docker-compose.yml           # Local development stack
     │
-    ├── backend/                    # FastAPI backend
+    ├── backend/                     # FastAPI backend
     │   ├── Dockerfile
-    │   ├── alembic.ini             # Alembic configuration
+    │   ├── alembic.ini              # Alembic configuration
     │   └── app/
-    │       ├── common/             # Shared schemas and utilities
-    │       ├── config/             # Application settings
-    │       ├── core/               # Authentication and core services
+    │       ├── common/              # Shared schemas and utilities
+    │       ├── config/              # Application settings
+    │       ├── core/                # Authentication, sessions, and core services
     │       │
-    │       ├── db/                 # Persistence layer
-    │       │   ├── migrations/     # Alembic migrations
-    │       │   ├── models.py       # SQLAlchemy models
-    │       │   └── session.py      # Database sessions
+    │       ├── db/                  # Persistence layer
+    │       │   ├── migrations/      # Alembic migrations
+    │       │   ├── models.py        # SQLAlchemy models
+    │       │   ├── redis.py         # Redis client configured from REDIS_URL
+    │       │   └── session.py       # Database sessions
     │       │
-    │       ├── domains/            # Domain-oriented application logic
+    │       ├── domains/             # Domain-oriented application logic
     │       │   ├── auth/
     │       │   ├── buildings/
     │       │   ├── dashboards/
@@ -478,30 +917,30 @@ The infrastructure includes:
     │       │   ├── users/
     │       │   └── villages/
     │       │
-    │       ├── game/               # Shared game rules and mechanics
-    │       ├── tests/              # Backend tests
-    │       ├── utils/              # General helpers
-    │       ├── main.py             # FastAPI entrypoint
-    │       └── seed.py             # Reference/world seed data
+    │       ├── game/                # Shared game rules and mechanics
+    │       ├── tests/               # Backend tests
+    │       ├── utils/               # General helpers
+    │       ├── main.py              # FastAPI entrypoint
+    │       └── seed.py              # Reference/world seed data
     │
-    ├── frontend/                   # React frontend
+    ├── frontend/                    # React/Vite frontend
     │   ├── Dockerfile
+    │   ├── firebase.json            # Firebase SPA + /api Cloud Run rewrites
+    │   ├── vite.config.ts           # Vite config + local /api proxy
     │   └── src/
-    │       ├── app/                # App providers and router
-    │       ├── components/         # Shared UI and layouts
-    │       │
-    │       ├── features/           # Feature-oriented application code
+    │       ├── api/                 # Axios client using /api/v1
+    │       ├── app/                 # App providers and router
+    │       ├── components/          # Shared UI and layouts
+    │       ├── features/            # Feature-oriented application code
     │       │   ├── auth/
     │       │   ├── villages/
     │       │   └── world-map/
-    │       │
-    │       ├── lib/                # API and shared client utilities
-    │       ├── routes/             # Route guards
-    │       ├── theme/              # MUI theme and design tokens
-    │       └── main.tsx            # React entrypoint
+    │       ├── routes/              # Route guards
+    │       ├── theme/               # MUI theme and design tokens
+    │       └── main.tsx             # React entrypoint
     │
     └── nginx/
-        └── nginx.conf              # Reverse proxy configuration
+        └── nginx.conf               # Local/reverse-proxy configuration
 ```
 
 ---
@@ -542,5 +981,5 @@ For Artifact Registry authentication:
 
 ```bash
 gcloud auth configure-docker europe-west9-docker.pkg.dev \
-  --project=vallorium-core-prod
+  --project=travian-prod-1234
 ```
