@@ -8,6 +8,13 @@
     ],
     "rewrites": [
       {
+        "source": "/api/**",
+        "run": {
+          "serviceId": "api",
+          "region": "europe-west9"
+        }
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
