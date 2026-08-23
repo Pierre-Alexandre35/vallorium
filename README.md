@@ -11,21 +11,21 @@
 
 <p align="center">
   <a href="https://vallorium.com/">
-    <img src="docs/img/gameplay_1.png" alt="Vallorium Gameplay" width="60%" />
+    <img src="docs/img/gameplay_1.png" alt="Vallorium Gameplay" width="100%" />
   </a>
 </p>
 
 
 <p align="center">
   <a href="https://vallorium.com/">
-    <img src="docs/img/gameplay_2.png" alt="Vallorium Gameplay" width="60%" />
+    <img src="docs/img/gameplay_2.png" alt="Vallorium Gameplay" width="100%" />
   </a>
 </p>
 
 
 <p align="center">
   <a href="https://vallorium.com/">
-    <img src="docs/img/gameplay_3.png" alt="Vallorium Gameplay" width="60%" />
+    <img src="docs/img/gameplay_3.png" alt="Vallorium Gameplay" width="100%" />
   </a>
 </p>
 A village contains 18 resource fields producing four resources:
