@@ -1,9 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { getDashboardOverview } from "@/features/villages/api/get-dashboard-overview";
-import type { DashboardOverview, VillageRow } from "@/features/villages/types/village";
+import { getCurrentDashboard } from "@/features/villages/api/get-current-dashboard";
+import type {
+  DashboardVillage,
+  VillageRow,
+} from "@/features/villages/types/village";
 
-function toVillageRow(village: DashboardOverview["villages"][number]): VillageRow {
+function toVillageRow(village: DashboardVillage): VillageRow {
   return {
     id: village.id,
     name: village.name,
@@ -16,13 +19,13 @@ function toVillageRow(village: DashboardOverview["villages"][number]): VillageRo
   };
 }
 
-export function useHomeData() {
+export function useHomeData(currentVillageId: number | null | undefined) {
   return useQuery({
-    queryKey: ["dashboard", "overview"],
-    queryFn: ({ signal }) => getDashboardOverview(signal),
-    select: (overview) => ({
-      ...overview,
-      villages: overview.villages.map(toVillageRow),
+    queryKey: ["dashboard", "current", currentVillageId],
+    queryFn: ({ signal }) => getCurrentDashboard(signal),
+    enabled: currentVillageId != null,
+    select: (dashboard) => ({
+      village: dashboard.village ? toVillageRow(dashboard.village) : null,
     }),
   });
 }

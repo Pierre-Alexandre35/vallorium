@@ -1,9 +1,6 @@
-from fastapi import (
-    Cookie,
-    Depends,
-    HTTPException,
-    status,
-)
+from __future__ import annotations
+
+from fastapi import Cookie, Depends, HTTPException, status
 
 import app.db.models as models
 import app.db.session as session
@@ -11,9 +8,35 @@ import app.db.session as session
 from app.core import security
 from app.core.sessions import (
     SESSION_COOKIE_NAME,
-    get_session_user_id,
+    SessionUser,
+    get_session_user,
+    refresh_session_user,
 )
 import app.domains.users.service as user_service
+import app.domains.villages.repository as village_repo
+
+
+def _enum_value(value: object | None) -> str | None:
+    if value is None:
+        return None
+    return str(getattr(value, "value", value))
+
+
+def session_user_from_model(
+    user: models.User,
+    *,
+    current_village_id: int | None,
+) -> SessionUser:
+    tribe = getattr(user, "tribe", None)
+    return SessionUser(
+        id=user.id,
+        email=user.email,
+        is_active=user.is_active,
+        is_superuser=user.is_superuser,
+        tribe_id=user.tribe_id,
+        tribe_name=_enum_value(getattr(tribe, "name", None)),
+        current_village_id=current_village_id,
+    )
 
 
 def get_current_user(
@@ -22,38 +45,48 @@ def get_current_user(
         default=None,
         alias=SESSION_COOKIE_NAME,
     ),
-) -> models.User:
+) -> SessionUser:
     if session_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
         )
 
-    user_id = get_session_user_id(session_id)
+    session_value = get_session_user(session_id)
 
-    if user_id is None:
+    if session_value is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expired or invalid",
         )
 
-    user = user_service.get_user_raw(
-        db,
-        user_id,
-    )
+    if isinstance(session_value, SessionUser):
+        return session_value
 
+    # Backwards compatibility for sessions created before rich session data was
+    # introduced. This DB path runs once, then the Redis value is upgraded.
+    user = user_service.get_user_raw(db, session_value)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
         )
 
-    return user
+    current_village_id = village_repo.get_first_village_id_for_owner(
+        db,
+        owner_id=user.id,
+    )
+    upgraded_session = session_user_from_model(
+        user,
+        current_village_id=current_village_id,
+    )
+    refresh_session_user(session_id, upgraded_session)
+    return upgraded_session
 
 
 def get_current_active_user(
-    current_user: models.User = Depends(get_current_user),
-) -> models.User:
+    current_user: SessionUser = Depends(get_current_user),
+) -> SessionUser:
     if not current_user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -64,8 +97,8 @@ def get_current_active_user(
 
 
 def get_current_active_superuser(
-    current_user: models.User = Depends(get_current_user),
-) -> models.User:
+    current_user: SessionUser = Depends(get_current_user),
+) -> SessionUser:
     if not current_user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -95,4 +128,3 @@ def authenticate_user(
         return None
 
     return user
-

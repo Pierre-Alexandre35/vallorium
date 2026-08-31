@@ -45,6 +45,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     func,
+    text
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -843,6 +844,19 @@ class VillageFarmUpgrade(Base):
             "ix_farm_upgrade_plot_status",
             "village_farm_plot_id",
             "status",
+        ),
+        Index(
+            "uq_farm_upgrade_active_per_plot",
+            "village_farm_plot_id",
+            unique=True,
+            postgresql_where=text(
+                "status IN ('queued', 'in_progress')"
+            ),
+        ),
+        Index(
+            "ix_farm_upgrade_status_completes_at",
+            "status",
+            "completes_at",
         ),
     )
 

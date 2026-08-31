@@ -15,7 +15,7 @@ from app.domains.villages.schemas import (
     VillageFarmOut
 )
 from app.core.auth import get_current_active_user
-from app.db.models import User
+from app.core.sessions import SessionUser
 
 village_router = APIRouter()
 
@@ -26,7 +26,7 @@ village_router = APIRouter()
 def village_create(
     village: VillageCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: SessionUser = Depends(get_current_active_user),
 ):
     """
     Create a new village for the current user.
@@ -41,7 +41,7 @@ def village_create(
 )
 def list_user_villages(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: SessionUser = Depends(get_current_active_user),
 ):
     """
     List all villages owned by the current authenticated user.
@@ -57,7 +57,7 @@ def list_user_villages(
 def get_my_village(
     village_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: SessionUser = Depends(get_current_active_user),
 ):
     """
     Get a specific village owned by the current authenticated user.
@@ -74,7 +74,7 @@ def update_village_name(
     village_id: int,
     payload: VillageNameUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: SessionUser = Depends(get_current_active_user),
 ):
     """
     Update the name of a village owned by the current authenticated user.
@@ -95,7 +95,7 @@ def update_village_name(
 def get_village_by_name(
     village_name: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: SessionUser = Depends(get_current_active_user),
 ):
     """
     Get a specific village by its unique name, owned by the current user.
@@ -111,7 +111,7 @@ def get_village_by_name(
 def get_village_resource_production(
     village_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: SessionUser = Depends(get_current_active_user),
 ):
     """
     Get the resource production per hour for a specific village.
@@ -129,7 +129,7 @@ def get_village_resource_production(
 def get_village_resource_balance(
     village_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: SessionUser = Depends(get_current_active_user),
 ):
     """
     Get the current balance of each resource type in a village after accrual.
@@ -148,7 +148,7 @@ def get_village_resource_balance(
 def get_village_farms(
     village_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: SessionUser = Depends(get_current_active_user),
 ) -> list[VillageFarmOut]:
     return village_service.get_village_farms(
         db=db,
@@ -166,7 +166,7 @@ def upgrade_farm_level(
     village_id: int,
     farm_plot_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: SessionUser = Depends(get_current_active_user),
 ) -> FarmUpgradeOut:
     return village_service.upgrade_farm_level(
         db=db,

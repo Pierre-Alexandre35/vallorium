@@ -52,7 +52,8 @@ def signup(
                 detail="Account already exists",
             )
 
-        if tribe_repo.get_by_id(db, data.tribe_id) is None:
+        tribe = tribe_repo.get_by_id(db, data.tribe_id)
+        if tribe is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid tribe",
@@ -77,18 +78,24 @@ def signup(
                 detail="No starter map tile is available.",
             )
 
-        village_service.initialize_village(
+        village = village_service.initialize_village(
             db,
             name=STARTING_VILLAGE_NAME,
             tile=tile,
             owner_id=user.id,
         )
 
+        tribe_name_raw = getattr(tribe, "name", None)
+        tribe_name = getattr(tribe_name_raw, "value", tribe_name_raw)
+
         response = AuthResponse(
             user=AuthUser(
                 id=user.id,
                 email=user.email,
                 is_superuser=user.is_superuser,
+                tribe_id=user.tribe_id,
+                tribe_name=tribe_name,
+                current_village_id=village.id,
             )
         )
 

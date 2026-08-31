@@ -7,6 +7,9 @@ from sqlalchemy import asc, case, or_, select
 import app.db.models as db
 
 
+_DEFAULT_STORAGE_CAPS: tuple[int, int] | None = None
+
+
 def fetch_building_catalog(
     db_sess: Session, *, tribe_id: Optional[int] = None
 ) -> Sequence[db.BuildingType]:
@@ -43,15 +46,17 @@ def resources_enum_name_by_id(db_sess: Session) -> Dict[int, str]:
     return {r.id: r.name.name for r in rows}
 
 
-def get_storage_caps_by_village_ids(
+def _get_default_storage_caps(
     db_sess: Session,
-    village_ids: list[int],
-) -> dict[int, tuple[int, int]]:
-    if not village_ids:
-        return {}
+) -> tuple[int, int]:
+    global _DEFAULT_STORAGE_CAPS
 
-    # Storage capacity is reference data and is currently identical for every
-    # village. Fetch warehouse + granary defaults in a single DB round-trip.
+    if _DEFAULT_STORAGE_CAPS is not None:
+        return _DEFAULT_STORAGE_CAPS
+
+    # These are reference/master values and currently identical for every
+    # village. Cache them in-process after the first lookup so dashboard and
+    # resource reads do not spend a DB round-trip on static data.
     warehouse_cap_query = (
         select(db.WarehouseCapacity.capacity)
         .order_by(
@@ -76,5 +81,19 @@ def get_storage_caps_by_village_ids(
         granary_cap_query,
     ).one()
 
-    capacities = (int(warehouse_cap or 0), int(granary_cap or 0))
+    _DEFAULT_STORAGE_CAPS = (
+        int(warehouse_cap or 0),
+        int(granary_cap or 0),
+    )
+    return _DEFAULT_STORAGE_CAPS
+
+
+def get_storage_caps_by_village_ids(
+    db_sess: Session,
+    village_ids: list[int],
+) -> dict[int, tuple[int, int]]:
+    if not village_ids:
+        return {}
+
+    capacities = _get_default_storage_caps(db_sess)
     return {village_id: capacities for village_id in village_ids}
