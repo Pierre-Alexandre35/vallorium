@@ -1,5 +1,4 @@
 services:
-
   migrate:
     profiles: ["migrate"]
     build:
@@ -12,6 +11,7 @@ services:
       postgres:
         condition: service_healthy
     command: bash -lc 'alembic upgrade head && python -m app.seed'
+
   postgres:
     image: postgres:17
     environment:
@@ -29,6 +29,11 @@ services:
   redis:
     image: redis:7
     ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   backend:
     build:
@@ -38,28 +43,59 @@ services:
     env_file: [backend/.env.local]
     environment:
       PYTHONPATH: /app
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
     command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8080
     volumes:
       - ./backend:/app:cached
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     ports: ["8080:8080"]
 
-  # worker:
-  #   build:
-  #     context: backend
-  #     dockerfile: Dockerfile
-  #   working_dir: /app
-  #   env_file: [backend/.env.local]
-  #   environment:
-  #     PYTHONPATH: /app
-  #   command: celery --app app.tasks worker --loglevel=DEBUG -Q main-queue -c 1
-  #   volumes:
-  #     - ./backend:/app:cached
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
+  worker:
+    build:
+      context: backend
+      dockerfile: Dockerfile
+    working_dir: /app
+    env_file: [backend/.env.local]
+    environment:
+      PYTHONPATH: /app
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+    command: >
+      celery --app app.core.celery_app.celery_app
+      worker --loglevel=INFO -Q main-queue -c 1
+    volumes:
+      - ./backend:/app:cached
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  beat:
+    build:
+      context: backend
+      dockerfile: Dockerfile
+    working_dir: /app
+    env_file: [backend/.env.local]
+    environment:
+      PYTHONPATH: /app
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+    command: >
+      celery --app app.core.celery_app.celery_app
+      beat --loglevel=INFO --schedule=/tmp/celerybeat-schedule
+    volumes:
+      - ./backend:/app:cached
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   flower:
     image: mher/flower
@@ -67,7 +103,9 @@ services:
     environment:
       CELERY_BROKER_URL: redis://redis:6379/0
     ports: ["5555:5555"]
-    depends_on: [redis]
+    depends_on:
+      redis:
+        condition: service_healthy
 
   nginx:
     image: nginx:1.27-alpine

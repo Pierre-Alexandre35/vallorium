@@ -169,6 +169,19 @@ def get_user_villages(db_sess: Session, owner_id: int) -> List[db.Village]:
     )
 
 
+def get_first_village_id_for_owner(
+    db_sess: Session,
+    *,
+    owner_id: int,
+) -> int | None:
+    return db_sess.scalar(
+        select(db.Village.id)
+        .where(db.Village.owner_id == owner_id)
+        .order_by(db.Village.id)
+        .limit(1)
+    )
+
+
 def get_village_by_id(
     db_sess: Session,
     owner_id: int,
@@ -182,6 +195,50 @@ def get_village_by_id(
         )
         .one_or_none()
     )
+
+
+def get_owned_village_with_due_upgrade_flag(
+    db_sess: Session,
+    *,
+    owner_id: int,
+    village_id: int,
+    now: datetime,
+) -> tuple[db.Village, bool] | None:
+    """Authorize a village and detect overdue farm work in one DB round-trip."""
+    due_upgrade_exists = (
+        select(db.VillageFarmUpgrade.id)
+        .join(
+            db.VillageFarmPlot,
+            db.VillageFarmPlot.id
+            == db.VillageFarmUpgrade.village_farm_plot_id,
+        )
+        .where(
+            db.VillageFarmPlot.village_id == db.Village.id,
+            db.VillageFarmUpgrade.status == db.UpgradeStatus.IN_PROGRESS,
+            db.VillageFarmUpgrade.completes_at.is_not(None),
+            db.VillageFarmUpgrade.completes_at <= now,
+        )
+        .exists()
+    )
+
+    row = (
+        db_sess.query(
+            db.Village,
+            due_upgrade_exists.label("has_due_upgrade"),
+        )
+        .options(joinedload(db.Village.tile))
+        .filter(
+            db.Village.id == village_id,
+            db.Village.owner_id == owner_id,
+        )
+        .one_or_none()
+    )
+
+    if row is None:
+        return None
+
+    village, has_due_upgrade = row
+    return village, bool(has_due_upgrade)
 
 
 def get_village_by_name_and_owner(
@@ -319,6 +376,130 @@ def get_owned_farm_plot_for_update(
     )
 
 
+def get_village_for_update(
+    db_sess: Session,
+    *,
+    village_id: int,
+    skip_locked: bool = False,
+) -> Optional[db.Village]:
+    """Lock one village row for game-state reconciliation/commands."""
+    return (
+        db_sess.query(db.Village)
+        .filter(db.Village.id == village_id)
+        .with_for_update(
+            of=db.Village,
+            skip_locked=skip_locked,
+        )
+        .one_or_none()
+    )
+
+
+def has_due_farm_upgrade_for_village(
+    db_sess: Session,
+    *,
+    village_id: int,
+    now: datetime,
+) -> bool:
+    """Return whether one village has an overdue in-progress farm upgrade."""
+    return (
+        db_sess.query(db.VillageFarmUpgrade.id)
+        .join(
+            db.VillageFarmPlot,
+            db.VillageFarmPlot.id
+            == db.VillageFarmUpgrade.village_farm_plot_id,
+        )
+        .filter(
+            db.VillageFarmPlot.village_id == village_id,
+            db.VillageFarmUpgrade.status == db.UpgradeStatus.IN_PROGRESS,
+            db.VillageFarmUpgrade.completes_at.is_not(None),
+            db.VillageFarmUpgrade.completes_at <= now,
+        )
+        .first()
+        is not None
+    )
+
+
+def get_village_ids_with_due_farm_upgrades(
+    db_sess: Session,
+    *,
+    now: datetime,
+    limit: int = 100,
+    exclude_village_ids: set[int] | None = None,
+) -> list[int]:
+    """Return a bounded batch of villages with overdue farm upgrades.
+
+    This query is global across all users. It only considers villages that
+    currently have an in-progress upgrade whose game completion timestamp has
+    passed.
+    """
+    query = (
+        db_sess.query(db.VillageFarmPlot.village_id)
+        .join(
+            db.VillageFarmUpgrade,
+            db.VillageFarmUpgrade.village_farm_plot_id
+            == db.VillageFarmPlot.id,
+        )
+        .filter(
+            db.VillageFarmUpgrade.status == db.UpgradeStatus.IN_PROGRESS,
+            db.VillageFarmUpgrade.completes_at.is_not(None),
+            db.VillageFarmUpgrade.completes_at <= now,
+        )
+    )
+
+    if exclude_village_ids:
+        query = query.filter(
+            ~db.VillageFarmPlot.village_id.in_(exclude_village_ids)
+        )
+
+    rows = (
+        query.group_by(db.VillageFarmPlot.village_id)
+        .order_by(
+            func.min(db.VillageFarmUpgrade.completes_at),
+            db.VillageFarmPlot.village_id,
+        )
+        .limit(limit)
+        .all()
+    )
+
+    return [int(village_id) for (village_id,) in rows]
+
+
+def get_due_farm_upgrades_for_village(
+    db_sess: Session,
+    *,
+    village_id: int,
+    now: datetime,
+) -> list[db.VillageFarmUpgrade]:
+    """Lock and return overdue upgrades for one already-locked village.
+
+    Ordering by ``completes_at`` is required because each completed field can
+    change the village production rate for the time interval that follows.
+    """
+    return (
+        db_sess.query(db.VillageFarmUpgrade)
+        .join(
+            db.VillageFarmPlot,
+            db.VillageFarmPlot.id
+            == db.VillageFarmUpgrade.village_farm_plot_id,
+        )
+        .options(
+            selectinload(db.VillageFarmUpgrade.farm_plot)
+        )
+        .filter(
+            db.VillageFarmPlot.village_id == village_id,
+            db.VillageFarmUpgrade.status == db.UpgradeStatus.IN_PROGRESS,
+            db.VillageFarmUpgrade.completes_at.is_not(None),
+            db.VillageFarmUpgrade.completes_at <= now,
+        )
+        .order_by(
+            db.VillageFarmUpgrade.completes_at,
+            db.VillageFarmUpgrade.id,
+        )
+        .with_for_update(of=db.VillageFarmUpgrade)
+        .all()
+    )
+
+
 def has_active_farm_upgrade(
     db_sess: Session,
     *,
@@ -384,12 +565,30 @@ def insert_farm_upgrade(
     return upgrade
 
 
+def get_farm_plots_for_village(
+    db_sess: Session,
+    *,
+    village_id: int,
+) -> list[db.VillageFarmPlot]:
+    """Load farm plots after the service has already authorized the village."""
+    return (
+        db_sess.query(db.VillageFarmPlot)
+        .options(
+            joinedload(db.VillageFarmPlot.resource_type),
+        )
+        .filter(db.VillageFarmPlot.village_id == village_id)
+        .order_by(db.VillageFarmPlot.farm_number)
+        .all()
+    )
+
+
 def get_owned_farm_plots(
     db_sess: Session,
     *,
     village_id: int,
     owner_id: int,
 ) -> list[db.VillageFarmPlot]:
+    """Owner-scoped variant kept for callers that have not authorized first."""
     return (
         db_sess.query(db.VillageFarmPlot)
         .join(

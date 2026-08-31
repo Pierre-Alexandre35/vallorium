@@ -9,12 +9,15 @@ from fastapi import (
     Response,
     status,
 )
+
 from app.core.auth import (
     authenticate_user,
     get_current_active_user,
+    session_user_from_model,
 )
 from app.core.sessions import (
     SESSION_COOKIE_NAME,
+    SessionUser,
     clear_session_cookie,
     create_session,
     delete_session,
@@ -27,11 +30,26 @@ from app.domains.auth.schemas import (
     LoginRequest,
     SignupRequest,
 )
+import app.domains.villages.repository as village_repo
+
 
 auth_router = r = APIRouter(
     prefix="/auth",
     tags=["auth"],
 )
+
+
+def _auth_response(user: SessionUser) -> AuthResponse:
+    return AuthResponse(
+        user={
+            "id": user.id,
+            "email": user.email,
+            "is_superuser": user.is_superuser,
+            "tribe_id": user.tribe_id,
+            "tribe_name": user.tribe_name,
+            "current_village_id": user.current_village_id,
+        }
+    )
 
 
 @r.post(
@@ -55,20 +73,22 @@ def login(
             detail="Incorrect email or password",
         )
 
-    session_id = create_session(user.id)
+    current_village_id = village_repo.get_first_village_id_for_owner(
+        db,
+        owner_id=user.id,
+    )
+    session_user = session_user_from_model(
+        user,
+        current_village_id=current_village_id,
+    )
+    session_id = create_session(session_user)
 
     set_session_cookie(
         response,
         session_id,
     )
 
-    return {
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "is_superuser": user.is_superuser,
-        }
-    }
+    return _auth_response(session_user)
 
 
 @r.post(
@@ -95,7 +115,16 @@ def signup(
         idempotency_key=idempotency_key,
     )
 
-    session_id = create_session(auth_response.user.id)
+    session_user = SessionUser(
+        id=auth_response.user.id,
+        email=str(auth_response.user.email),
+        is_active=True,
+        is_superuser=auth_response.user.is_superuser,
+        tribe_id=auth_response.user.tribe_id,
+        tribe_name=auth_response.user.tribe_name,
+        current_village_id=auth_response.user.current_village_id,
+    )
+    session_id = create_session(session_user)
 
     set_session_cookie(
         response,
@@ -127,12 +156,6 @@ def logout(
     response_model=AuthResponse,
 )
 def me(
-    current_user=Depends(get_current_active_user),
+    current_user: SessionUser = Depends(get_current_active_user),
 ):
-    return {
-        "user": {
-            "id": current_user.id,
-            "email": current_user.email,
-            "is_superuser": current_user.is_superuser,
-        }
-    }
+    return _auth_response(current_user)

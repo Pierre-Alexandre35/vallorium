@@ -74,52 +74,72 @@ def _compute_gain(hourly_rate: int, elapsed_seconds: float) -> int:
     return (hourly_rate * safe_elapsed) // 3600
 
 
+def get_village_resource_snapshot(
+    db_sess: Session,
+    *,
+    village_id: int,
+    now: datetime | None = None,
+) -> tuple[dict[str, int], dict[str, int], StorageCaps]:
+    """Return production, lazy balances, and capacities for one village.
+
+    The storage rows and aggregated farm production are fetched in one SQL
+    query. Storage capacities are reference data and are cached by the building
+    repository after their first lookup.
+    """
+    now_utc = _normalize_dt(now or _utcnow())
+
+    rows = resource_repo.load_resource_state_with_production(
+        db_sess=db_sess,
+        village_id=village_id,
+    )
+
+    caps_by_village_id = building_repo.get_storage_caps_by_village_ids(
+        db_sess=db_sess,
+        village_ids=[village_id],
+    )
+    warehouse_cap, granary_cap = caps_by_village_id.get(
+        village_id,
+        (None, None),
+    )
+    caps = _build_caps(warehouse_cap, granary_cap)
+
+    production: dict[str, int] = {}
+    balances: dict[str, int] = {}
+
+    for (
+        _resource_type_id,
+        resource_type_name,
+        stored_amount,
+        last_updated,
+        hourly_rate,
+    ) in rows:
+        resource_name = _resource_name(resource_type_name)
+        resource_key = resource_name.lower()
+        rate = int(hourly_rate or 0)
+        elapsed_seconds = (
+            now_utc - _normalize_dt(last_updated)
+        ).total_seconds()
+        gain = _compute_gain(rate, elapsed_seconds)
+        capacity = _cap_for(resource_name, caps)
+
+        production[resource_key] = rate
+        balances[resource_key] = min(int(stored_amount) + gain, capacity)
+
+    return production, balances, caps
+
+
 def get_computed_balance_map(
     db_sess: Session,
     village_id: int,
     now: datetime | None = None,
 ) -> dict[str, int]:
     """Compute current balances for an already-authorized village."""
-    now_utc = _normalize_dt(now or _utcnow())
-
-    storages = resource_repo.load_storages(
-        db_sess=db_sess,
+    _production, balances, _caps = get_village_resource_snapshot(
+        db_sess,
         village_id=village_id,
+        now=now,
     )
-
-    production_rows = village_repo.get_village_production_by_village_ids(
-        db_sess=db_sess,
-        village_ids=[village_id],
-    ).get(village_id, [])
-    rate_by_res_id = _to_rate_map(production_rows)
-
-    caps_by_village_id = building_repo.get_storage_caps_by_village_ids(
-        db_sess=db_sess,
-        village_ids=[village_id],
-    )
-
-    warehouse_cap, granary_cap = caps_by_village_id.get(
-        village_id,
-        (None, None),
-    )
-
-    caps = _build_caps(warehouse_cap, granary_cap)
-
-    result: dict[str, int] = {}
-
-    for storage in storages:
-        last_updated_utc = _normalize_dt(storage.last_updated)
-        elapsed_seconds = (now_utc - last_updated_utc).total_seconds()
-
-        resource_name = _resource_name(storage.resource_type.name)
-        cap = _cap_for(resource_name, caps)
-        hourly_rate = rate_by_res_id.get(storage.resource_type_id, 0)
-        gain = _compute_gain(hourly_rate, elapsed_seconds)
-
-        computed_amount = min(storage.stored_amount + gain, cap)
-        result[resource_name.lower()] = computed_amount
-
-    return result
+    return balances
 
 
 def settle_and_lock_village_resources(

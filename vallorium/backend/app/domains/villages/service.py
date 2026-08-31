@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import logging
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
@@ -17,6 +18,9 @@ import app.domains.resources.service as resource_service
 
 
 from app.db.models import Village, UpgradeStatus, Resource, MapTile, VillageFarmPlot
+
+
+logger = logging.getLogger(__name__)
 
 
 def initialize_village(
@@ -203,10 +207,201 @@ def update_village_name(
         raise
 
 
+def _complete_due_farm_upgrades_for_locked_village(
+    db: Session,
+    *,
+    village_id: int,
+    now: datetime,
+) -> int:
+    """Materialize overdue farm upgrades for one locked village.
+
+    ``VillageFarmUpgrade.completes_at`` is the game-time source of truth.
+    Resources are settled at each completion timestamp while the old farm
+    level is still active; only then is the new level materialized.
+
+    The caller owns the surrounding transaction and must already hold the
+    village row lock.
+    """
+    upgrades = village_repo.get_due_farm_upgrades_for_village(
+        db_sess=db,
+        village_id=village_id,
+        now=now,
+    )
+
+    completed_count = 0
+
+    for upgrade in upgrades:
+        completion_time = upgrade.completes_at
+        if completion_time is None:
+            continue
+
+        farm_plot = upgrade.farm_plot
+
+        if farm_plot.level != upgrade.from_level:
+            raise RuntimeError(
+                f"Farm upgrade {upgrade.id} expected farm plot "
+                f"{farm_plot.id} at level {upgrade.from_level}, "
+                f"found level {farm_plot.level}."
+            )
+
+        # Production before completion belongs to the old farm level.
+        resource_service.settle_and_lock_village_resources(
+            db_sess=db,
+            village_id=village_id,
+            now=completion_time,
+        )
+
+        # The new level becomes effective at completion_time.
+        farm_plot.level = upgrade.target_level
+        upgrade.status = UpgradeStatus.COMPLETED
+
+        # completed_at records when the DB row was materialized. The economic
+        # completion time remains upgrade.completes_at.
+        upgrade.completed_at = now
+
+        # SessionLocal uses autoflush=False. Flush after each event so the next
+        # production settlement sees this newly completed level.
+        db.flush()
+        completed_count += 1
+
+    return completed_count
+
+
+def reconcile_owned_village_if_due(
+    db: Session,
+    *,
+    village_id: int,
+    owner_id: int,
+    now: datetime,
+) -> Village:
+    """Return correct village state with one cheap read in the normal path.
+
+    Celery normally materializes completed upgrades. Request-time reconciliation
+    is only a correctness fallback. Authorization and the "is anything due?"
+    check share one SQL round-trip; row locking is only used when work is due.
+    """
+    state = village_repo.get_owned_village_with_due_upgrade_flag(
+        db_sess=db,
+        owner_id=owner_id,
+        village_id=village_id,
+        now=now,
+    )
+
+    if state is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Village not found or unauthorized",
+        )
+
+    village, has_due_upgrade = state
+    if not has_due_upgrade:
+        return village
+
+    try:
+        locked_village = village_repo.get_village_for_update(
+            db_sess=db,
+            village_id=village_id,
+        )
+
+        if locked_village is None or locked_village.owner_id != owner_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Village not found or unauthorized",
+            )
+
+        _complete_due_farm_upgrades_for_locked_village(
+            db,
+            village_id=village_id,
+            now=now,
+        )
+
+        db.commit()
+        return get_user_village_by_id(
+            db=db,
+            village_id=village_id,
+            owner_id=owner_id,
+        )
+
+    except Exception:
+        db.rollback()
+        raise
+
+
+def complete_due_farm_upgrades(
+    db: Session,
+    *,
+    now: datetime | None = None,
+    batch_size: int = 100,
+) -> int:
+    """Materialize all currently overdue farm upgrades in bounded batches.
+
+    The discovery query is global across all users but only returns villages
+    that actually have due work. Each village is committed independently, so
+    locks stay short and memory use remains bounded even with many villages.
+    """
+    if batch_size <= 0:
+        raise ValueError("batch_size must be greater than zero")
+
+    effective_now = now or datetime.now(timezone.utc)
+    total_completed = 0
+    skipped_village_ids: set[int] = set()
+
+    while True:
+        village_ids = village_repo.get_village_ids_with_due_farm_upgrades(
+            db_sess=db,
+            now=effective_now,
+            limit=batch_size,
+            exclude_village_ids=skipped_village_ids,
+        )
+
+        if not village_ids:
+            break
+
+        for village_id in village_ids:
+            try:
+                village = village_repo.get_village_for_update(
+                    db_sess=db,
+                    village_id=village_id,
+                    skip_locked=True,
+                )
+
+                if village is None:
+                    # Another worker may own this village right now. A later
+                    # scheduled sweep will pick it up if work remains.
+                    db.rollback()
+                    skipped_village_ids.add(village_id)
+                    continue
+
+                completed = _complete_due_farm_upgrades_for_locked_village(
+                    db,
+                    village_id=village_id,
+                    now=effective_now,
+                )
+
+                db.commit()
+                total_completed += completed
+
+            except Exception:
+                db.rollback()
+                skipped_village_ids.add(village_id)
+                logger.exception(
+                    "Failed to complete due farm upgrades for village %s",
+                    village_id,
+                )
+
+    return total_completed
+
+
 def get_village_production_summary(
     db: Session, village_id: int, owner_id: int
 ) -> VillageProductionOut:
-    village = get_user_village_by_id(db, village_id, owner_id)
+    now = datetime.now(timezone.utc)
+    village = reconcile_owned_village_if_due(
+        db,
+        village_id=village_id,
+        owner_id=owner_id,
+        now=now,
+    )
     production = village_repo.get_village_production(db, village_id)
 
     return VillageProductionOut(
@@ -236,15 +431,18 @@ def get_village_resource_balances(
     village_id: int,
     owner_id: int,
 ) -> VillageResourceOut:
-    village = get_user_village_by_id(
-        db=db,
+    now = datetime.now(timezone.utc)
+    village = reconcile_owned_village_if_due(
+        db,
         village_id=village_id,
         owner_id=owner_id,
+        now=now,
     )
 
     balance_map = resource_service.get_computed_balance_map(
         db_sess=db,
         village_id=village_id,
+        now=now,
     )
 
     return VillageResourceOut(
@@ -267,6 +465,30 @@ def upgrade_farm_level(
     owner_id: int,
 ) -> FarmUpgradeOut:
     try:
+        # Serialize game-state commands for this village. Construction timers
+        # can still overlap for different farms; this lock only protects the
+        # short database transaction.
+        village = village_repo.get_village_for_update(
+            db_sess=db,
+            village_id=village_id,
+        )
+
+        if village is None or village.owner_id != owner_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Village not found or unauthorized.",
+            )
+
+        now = datetime.now(timezone.utc)
+
+        # If Celery is a little late, bring the village to the correct game
+        # state before evaluating costs, production, or the next target level.
+        _complete_due_farm_upgrades_for_locked_village(
+            db,
+            village_id=village_id,
+            now=now,
+        )
+
         farm_plot = village_repo.get_owned_farm_plot_for_update(
             db_sess=db,
             village_id=village_id,
@@ -301,7 +523,8 @@ def upgrade_farm_level(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
-                    f"Level {target_level} is not configured " "for this farm type."
+                    f"Level {target_level} is not configured "
+                    "for this farm type."
                 ),
             )
 
@@ -323,8 +546,6 @@ def upgrade_farm_level(
             int(cost.payment_resource_type_id): int(cost.amount)
             for cost in level_definition.costs
         }
-
-        now = datetime.now(timezone.utc)
 
         resource_service.spend_resources(
             db_sess=db,
@@ -392,31 +613,39 @@ def upgrade_farm_level(
             },
         ) from exc
 
+    except IntegrityError as exc:
+        db.rollback()
+
+        diag = getattr(getattr(exc, "orig", None), "diag", None)
+        constraint_name = getattr(diag, "constraint_name", None)
+
+        if constraint_name == "uq_farm_upgrade_active_per_plot":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This farm is already being upgraded.",
+            ) from exc
+
+        raise
+
+    except Exception:
+        db.rollback()
+        raise
+
 
 def get_village_farms(
     db: Session,
     village_id: int,
     owner_id: int,
 ) -> list[VillageFarmPlot]:
-    farms = village_repo.get_owned_farm_plots(
-        db_sess=db,
+    now = datetime.now(timezone.utc)
+    reconcile_owned_village_if_due(
+        db,
         village_id=village_id,
         owner_id=owner_id,
+        now=now,
     )
 
-    if farms:
-        return farms
-
-    village = village_repo.get_village_by_id(
+    return village_repo.get_farm_plots_for_village(
         db_sess=db,
-        owner_id=owner_id,
         village_id=village_id,
     )
-
-    if village is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Village not found.",
-        )
-
-    return []
