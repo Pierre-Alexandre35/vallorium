@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends,
+from fastapi import APIRouter, Depends, Cookie
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -15,10 +15,7 @@ from app.domains.villages.schemas import (
     VillageFarmOut
 )
 from app.core.auth import get_current_active_user
-from app.core.sessions import SessionUser
 from dataclasses import replace
-
-from fastapi import APIRouter, Cookie, Depends
 
 from app.core.sessions import (
     SESSION_COOKIE_NAME,
