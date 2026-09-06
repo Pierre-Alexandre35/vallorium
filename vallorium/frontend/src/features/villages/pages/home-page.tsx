@@ -10,17 +10,32 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-
+import { useCurrentUser } from "@/features/auth/hooks/use-current-user";
 import { ResourceBar } from "@/features/villages/components/resources/resource-bar";
 import { VillageFieldMap } from "@/features/villages/components/fields/village-field-map";
 import { VillageSidebar } from "@/features/villages/components/village-sidebar";
 import { VillageStatusPanel } from "@/features/villages/components/village-status-panel";
 import { EditableVillageName } from "@/features/villages/components/editable-village-name";
 import { useHomeData } from "@/features/villages/hooks/use-home-data";
+import { useVillageFarms } from "@/features/villages/hooks/use-village-farms";
 import { gameTokens } from "@/theme";
 
 export function HomePage() {
-  const query = useHomeData();
+  const currentUser = useCurrentUser();
+  const currentVillageId = currentUser.data?.current_village_id;
+  const query = useHomeData(currentVillageId);
+
+  // Start the separate farms request as soon as /auth/me tells us the current
+  // village id. VillageFieldMap reuses this same React Query cache entry later,
+  // so dashboard and farms load in parallel instead of as a waterfall.
+  const farmsQuery = useVillageFarms(currentVillageId);
+
+  async function refreshVillageData() {
+    await Promise.all([
+      query.refetch(),
+      currentVillageId != null ? farmsQuery.refetch() : Promise.resolve(),
+    ]);
+  }
 
   if (query.isError) {
     return (
@@ -47,6 +62,17 @@ export function HomePage() {
     );
   }
 
+  if (currentVillageId == null) {
+    return (
+      <Container
+        maxWidth={false}
+        sx={{ maxWidth: gameTokens.layout.contentMaxWidth, pt: { xs: 2, md: 3 } }}
+      >
+        <Alert severity="info">No villages are available for this account yet.</Alert>
+      </Container>
+    );
+  }
+
   if (query.isPending) {
     return (
       <Container
@@ -65,7 +91,7 @@ export function HomePage() {
     );
   }
 
-  const village = query.data.villages[0];
+  const village = query.data.village;
 
   if (!village) {
     return (
@@ -73,7 +99,7 @@ export function HomePage() {
         maxWidth={false}
         sx={{ maxWidth: gameTokens.layout.contentMaxWidth, pt: { xs: 2, md: 3 } }}
       >
-        <Alert severity="info">No villages are available for this account yet.</Alert>
+        <Alert severity="info">The current village could not be loaded.</Alert>
       </Container>
     );
   }
@@ -95,13 +121,13 @@ export function HomePage() {
             name={village.name}
           />
           <Typography color="text.secondary" sx={{ mt: 0.35 }}>
-            {query.data.user.tribe_name} village
+            {currentUser.data?.tribe_name ?? "Unknown"} village
           </Typography>
         </Box>
         <Tooltip title="Refresh village data">
           <IconButton
-            onClick={() => void query.refetch()}
-            disabled={query.isFetching}
+            onClick={() => void refreshVillageData()}
+            disabled={query.isFetching || farmsQuery.isFetching}
             aria-label="Refresh village data"
           >
             <RefreshRoundedIcon />

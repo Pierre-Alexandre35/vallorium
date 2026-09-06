@@ -55,12 +55,15 @@ def users_list(
     response_model_exclude_none=True,
 )
 def user_me(
+    db: Session = Depends(get_db),
     current_user=Depends(get_current_active_user),
 ):
+    """Get the full user profile.
+
+    Authentication itself is served from the Redis session. This endpoint is a
+    profile read, so it intentionally loads the richer ORM-backed user shape.
     """
-    Get the currently authenticated user.
-    """
-    return UserOut.model_validate(current_user)
+    return user_service.get_user(db, current_user.id)
 
 
 @r.get(

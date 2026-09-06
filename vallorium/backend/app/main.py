@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
+import logging
+import time
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 import app.core.config as settings
@@ -35,6 +37,23 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    if settings.LOG_REQUEST_TIMINGS:
+        request_logger = logging.getLogger("vallorium.requests")
+
+        @app.middleware("http")
+        async def request_timing(request: Request, call_next):
+            started_at = time.perf_counter()
+            response = await call_next(request)
+            duration_ms = (time.perf_counter() - started_at) * 1000
+            response.headers["Server-Timing"] = f"app;dur={duration_ms:.2f}"
+            request_logger.info(
+                "%s %s %.2fms",
+                request.method,
+                request.url.path,
+                duration_ms,
+            )
+            return response
 
     @app.get("/", tags=["health"])
     async def root_health():

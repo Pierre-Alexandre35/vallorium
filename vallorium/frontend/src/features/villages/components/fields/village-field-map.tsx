@@ -14,6 +14,7 @@ import styles from "@/features/villages/components/fields/village-field-map.modu
 import { ResourceIcon } from "@/features/villages/components/resources/resource-icon";
 import { resourceMeta } from "@/features/villages/config/resource-meta";
 import { useVillageFarms } from "@/features/villages/hooks/use-village-farms";
+import { useUpgradeFarm } from "@/features/villages/hooks/use-upgrade-farm";
 import type { ResourceKey } from "@/features/villages/types/village";
 import {
   gameShadows,
@@ -68,6 +69,7 @@ function toResourceKey(resourceName: string): ResourceKey | null {
 export function VillageFieldMap({ villageId }: VillageFieldMapProps) {
   const [selectedFarmNumber, setSelectedFarmNumber] = useState(13);
   const { data: farms = [], isLoading, isError } = useVillageFarms(villageId);
+  const upgradeFarmMutation = useUpgradeFarm(villageId);
 
   const farmsByNumber = new Map(
     farms.map((farm) => [farm.farm_number, farm]),
@@ -173,8 +175,10 @@ export function VillageFieldMap({ villageId }: VillageFieldMapProps) {
           </Box>
         </Stack>
 
-        <Button variant="contained" startIcon={<ArrowUpwardRoundedIcon />}>
-          Upgrade to {selected.level + 1}
+        <Button variant="contained" startIcon={<ArrowUpwardRoundedIcon/>}  onClick={() => upgradeFarmMutation.mutate(selected.id)} >
+            {upgradeFarmMutation.isPending
+    ? "Upgrading..."
+    : `Upgrade to ${selected.level + 1}`}
         </Button>
       </Stack>
     </GamePanel>

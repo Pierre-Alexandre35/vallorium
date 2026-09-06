@@ -24,6 +24,9 @@ class AuthUser(AppBaseModel):
     id: int
     email: EmailStr
     is_superuser: bool
+    tribe_id: int
+    tribe_name: str | None = None
+    current_village_id: int | None = None
 
 
 class AuthResponse(AppBaseModel):

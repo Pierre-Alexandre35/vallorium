@@ -1,6 +1,7 @@
 from collections import defaultdict
 from typing import Dict, Sequence
 
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session, joinedload
 import app.db.models as db
 
@@ -34,6 +35,64 @@ def load_storages(
         db_sess.query(db.VillageResourceStorage)
         .options(joinedload(db.VillageResourceStorage.resource_type))
         .filter(db.VillageResourceStorage.village_id == village_id)
+        .all()
+    )
+
+
+
+
+def load_resource_state_with_production(
+    db_sess: Session,
+    *,
+    village_id: int,
+) -> list[tuple[int, object, int, object, int]]:
+    """Load one village's resource balances and hourly production in one query.
+
+    This is the hot read path for the current-village dashboard. Production is
+    aggregated in a subquery and joined to the four storage rows, avoiding a
+    separate production round-trip.
+    """
+    production = (
+        db_sess.query(
+            db.VillageFarmPlot.resource_type_id.label("resource_type_id"),
+            func.coalesce(
+                func.sum(db.FarmLevel.production_per_hour),
+                0,
+            ).label("hourly_production"),
+        )
+        .join(
+            db.FarmLevel,
+            and_(
+                db.FarmLevel.farm_resource_type_id
+                == db.VillageFarmPlot.resource_type_id,
+                db.FarmLevel.level == db.VillageFarmPlot.level,
+            ),
+        )
+        .filter(db.VillageFarmPlot.village_id == village_id)
+        .group_by(db.VillageFarmPlot.resource_type_id)
+        .subquery()
+    )
+
+    return (
+        db_sess.query(
+            db.VillageResourceStorage.resource_type_id,
+            db.ResourcesTypes.name,
+            db.VillageResourceStorage.stored_amount,
+            db.VillageResourceStorage.last_updated,
+            func.coalesce(production.c.hourly_production, 0),
+        )
+        .join(
+            db.ResourcesTypes,
+            db.ResourcesTypes.id
+            == db.VillageResourceStorage.resource_type_id,
+        )
+        .outerjoin(
+            production,
+            production.c.resource_type_id
+            == db.VillageResourceStorage.resource_type_id,
+        )
+        .filter(db.VillageResourceStorage.village_id == village_id)
+        .order_by(db.VillageResourceStorage.resource_type_id)
         .all()
     )
 

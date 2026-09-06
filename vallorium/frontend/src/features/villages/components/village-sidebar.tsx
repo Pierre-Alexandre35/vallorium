@@ -20,7 +20,7 @@ export function VillageSidebar({ village }: { village: VillageRow }) {
             color="text.secondary"
             fontWeight={gameTokens.typography.weight.heavy}
           >
-            Your villages
+            Current village
           </Typography>
           <Button size="small" sx={{ minWidth: 0, px: 1 }} aria-label="Add village">
             <AddRoundedIcon fontSize="small" />

@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { updateVillageName } from "@/features/villages/api/update-village-name";
 import type {
-  DashboardOverview,
+  DashboardCurrent,
   VillageNameUpdate,
 } from "@/features/villages/types/village";
 
@@ -14,23 +14,19 @@ export function useUpdateVillageName(villageId: number) {
       updateVillageName(villageId, values),
 
     onSuccess: (updatedVillage) => {
-      queryClient.setQueryData<DashboardOverview>(
-        ["dashboard", "overview"],
+      queryClient.setQueryData<DashboardCurrent>(
+        ["dashboard", "current", villageId],
         (current) => {
-          if (!current) {
+          if (!current?.village || current.village.id !== updatedVillage.id) {
             return current;
           }
 
           return {
             ...current,
-            villages: current.villages.map((village) =>
-              village.id === updatedVillage.id
-                ? {
-                    ...village,
-                    name: updatedVillage.name,
-                  }
-                : village,
-            ),
+            village: {
+              ...current.village,
+              name: updatedVillage.name,
+            },
           };
         },
       );

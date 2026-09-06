@@ -27,6 +27,7 @@ import { useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { GameLogo } from "@/components/brand/game-logo";
+import { useCurrentUser } from "@/features/auth/hooks/use-current-user";
 import { useLogout } from "@/features/auth/hooks/use-logout";
 import { gameTokens } from "@/theme";
 
@@ -49,6 +50,7 @@ export function GameShell() {
   const location = useLocation();
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const { signOut, isSigningOut } = useLogout();
+  const currentUser = useCurrentUser();
 
   function openMobileMenu(event: MouseEvent<HTMLElement>) {
     setMenuAnchor(event.currentTarget);
@@ -135,10 +137,12 @@ export function GameShell() {
             <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: "auto" }}>
               <Box sx={{ display: { xs: "none", sm: "block" }, textAlign: "right" }}>
                 <Typography variant="body2" fontWeight={gameTokens.typography.weight.bold}>
-                  Marcus Aurelius
+                  {currentUser.data?.email ?? "Player"}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  Roman chief
+                  {currentUser.data?.tribe_name
+                    ? `${currentUser.data.tribe_name} chief`
+                    : "Village chief"}
                 </Typography>
               </Box>
               <Avatar sx={{ width: 38, height: 38, bgcolor: "primary.light" }}>

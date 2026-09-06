@@ -20,6 +20,9 @@ export interface AuthUser {
   id: number;
   email: string;
   is_superuser: boolean;
+  tribe_id: number;
+  tribe_name: string | null;
+  current_village_id: number | null;
 }
 
 export interface AuthResponse {
