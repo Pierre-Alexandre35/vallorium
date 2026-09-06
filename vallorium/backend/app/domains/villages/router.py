@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends,
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -16,23 +16,54 @@ from app.domains.villages.schemas import (
 )
 from app.core.auth import get_current_active_user
 from app.core.sessions import SessionUser
+from dataclasses import replace
+
+from fastapi import APIRouter, Cookie, Depends
+
+from app.core.sessions import (
+    SESSION_COOKIE_NAME,
+    SessionUser,
+    refresh_session_user,
+)
 
 village_router = APIRouter()
 
 
 @village_router.post(
-    "/villages", response_model=VillageOut, response_model_exclude_none=True
+    "/villages",
+    response_model=VillageOut,
+    response_model_exclude_none=True,
 )
 def village_create(
     village: VillageCreate,
     db: Session = Depends(get_db),
     current_user: SessionUser = Depends(get_current_active_user),
+    session_id: str | None = Cookie(
+        default=None,
+        alias=SESSION_COOKIE_NAME,
+    ),
 ):
-    """
-    Create a new village for the current user.
-    """
-    return village_service.create_village(db, village, owner_id=current_user.id)
+    created_village = village_service.create_village(
+        db,
+        village,
+        owner_id=current_user.id,
+    )
 
+    if (
+        current_user.current_village_id is None
+        and session_id is not None
+    ):
+        updated_session = replace(
+            current_user,
+            current_village_id=created_village.id,
+        )
+
+        refresh_session_user(
+            session_id,
+            updated_session,
+        )
+
+    return created_village
 
 @village_router.get(
     "/villages/",

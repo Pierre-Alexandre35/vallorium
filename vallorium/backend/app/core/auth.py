@@ -15,6 +15,8 @@ from app.core.sessions import (
 import app.domains.users.service as user_service
 import app.domains.villages.repository as village_repo
 
+from sqlalchemy.orm import Session
+
 
 def _enum_value(value: object | None) -> str | None:
     if value is None:
@@ -97,16 +99,30 @@ def get_current_active_user(
 
 
 def get_current_active_superuser(
+    db: Session = Depends(session.get_db),
     current_user: SessionUser = Depends(get_current_user),
-) -> SessionUser:
-    if not current_user.is_superuser:
+) -> models.User:
+    user = user_service.get_user_raw(db, current_user.id)
+
+    if user is None:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="The user doesn't have enough privileges",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
         )
 
-    return current_user
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Inactive user",
+        )
 
+    if not user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions",
+        )
+
+    return user
 
 def authenticate_user(
     db,
