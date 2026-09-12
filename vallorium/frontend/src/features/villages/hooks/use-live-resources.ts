@@ -7,30 +7,65 @@ import type {
 
 const keys: ResourceKey[] = ["wood", "clay", "iron", "crop"];
 
-export function useLiveResources(village: VillageRow) {
-  const [resources, setResources] = useState(village.resources);
+interface LiveResourcesState {
+  villageId: VillageRow["id"];
+  sourceResources: VillageRow["resources"];
+  resources: VillageRow["resources"];
+}
 
-  useEffect(() => {
-    setResources(village.resources);
-  }, [village.id, village.resources]);
+function createLiveResourcesState(village: VillageRow): LiveResourcesState {
+  return {
+    villageId: village.id,
+    sourceResources: { ...village.resources },
+    resources: { ...village.resources },
+  };
+}
+
+function hasResourceSnapshotChanged(
+  current: LiveResourcesState,
+  village: VillageRow,
+) {
+  if (current.villageId !== village.id) {
+    return true;
+  }
+
+  return keys.some(
+    (key) => current.sourceResources[key] !== village.resources[key],
+  );
+}
+
+export function useLiveResources(village: VillageRow) {
+  const [state, setState] = useState<LiveResourcesState>(() =>
+    createLiveResourcesState(village),
+  );
+
+  if (hasResourceSnapshotChanged(state, village)) {
+    setState(createLiveResourcesState(village));
+  }
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setResources((current) => {
-        const next = { ...current };
+      setState((current) => {
+        const resources = { ...current.resources };
+
         keys.forEach((key) => {
           const perSecond = (village.production[key] ?? 0) / 3600;
-          next[key] = Math.min(
+
+          resources[key] = Math.min(
             village.capacities[key] ?? Number.MAX_SAFE_INTEGER,
-            (current[key] ?? 0) + perSecond,
+            (current.resources[key] ?? 0) + perSecond,
           );
         });
-        return next;
+
+        return {
+          ...current,
+          resources,
+        };
       });
     }, 1000);
 
     return () => window.clearInterval(timer);
   }, [village.capacities, village.production]);
 
-  return resources;
+  return state.resources;
 }

@@ -15,19 +15,19 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { GamePanel } from "@/components/ui/game-panel";
 import { MapLegend } from "@/features/world-map/components/map-legend";
+import { TileDetailsPanel } from "@/features/world-map/components/tile-details-panel";
 import {
   WorldMapCanvas,
   type WorldMapCanvasHandle,
 } from "@/features/world-map/components/world-map-canvas";
-import { TileDetailsPanel } from "@/features/world-map/components/tile-details-panel";
 import { createDemoWorldMap } from "@/features/world-map/data/demo-world";
 import { useWorldMapData } from "@/features/world-map/hooks/use-world-map-data";
-import type { MapBounds, WorldMapTile } from "@/features/world-map/types/map";
+import type { MapBounds } from "@/features/world-map/types/map";
 import { gameTokens } from "@/theme";
 
 const MAP_BOUNDS: MapBounds = {
@@ -40,29 +40,24 @@ const MAP_BOUNDS: MapBounds = {
 export function WorldMapPage() {
   const navigate = useNavigate();
   const canvasRef = useRef<WorldMapCanvasHandle | null>(null);
+
   const query = useWorldMapData(1, MAP_BOUNDS);
   const previewData = useMemo(() => createDemoWorldMap(MAP_BOUNDS), []);
   const mapData = query.data ?? previewData;
+
   const playerTile =
     mapData.tiles.find((tile) => tile.occupant?.isCurrentPlayer) ?? null;
-  const [selectedTile, setSelectedTile] = useState<WorldMapTile | null>(
-    playerTile,
+
+  const [selectedTileId, setSelectedTileId] = useState<string | null>(
+    playerTile?.id ?? null,
   );
-  const [hoveredTile, setHoveredTile] = useState<WorldMapTile | null>(null);
+  const [hoveredTileId, setHoveredTileId] = useState<string | null>(null);
 
-  useEffect(() => {
-    setHoveredTile(null);
-    setSelectedTile((current) => {
-      if (current) {
-        const refreshed = mapData.tiles.find((tile) => tile.id === current.id);
-        if (refreshed) return refreshed;
-      }
+  const selectedTile =
+    mapData.tiles.find((tile) => tile.id === selectedTileId) ?? playerTile;
 
-      return (
-        mapData.tiles.find((tile) => tile.occupant?.isCurrentPlayer) ?? null
-      );
-    });
-  }, [mapData]);
+  const hoveredTile =
+    mapData.tiles.find((tile) => tile.id === hoveredTileId) ?? null;
 
   const displayedTile = hoveredTile ?? selectedTile;
 
@@ -114,6 +109,7 @@ export function WorldMapPage() {
               <ZoomOutRoundedIcon />
             </IconButton>
           </Tooltip>
+
           <Tooltip title="Zoom in">
             <IconButton
               onClick={() => canvasRef.current?.zoomIn()}
@@ -122,6 +118,7 @@ export function WorldMapPage() {
               <ZoomInRoundedIcon />
             </IconButton>
           </Tooltip>
+
           <Tooltip title="Reset view">
             <IconButton
               onClick={() => canvasRef.current?.resetView()}
@@ -130,18 +127,21 @@ export function WorldMapPage() {
               <CenterFocusStrongRoundedIcon />
             </IconButton>
           </Tooltip>
+
           <Button
             variant="outlined"
             startIcon={<MyLocationRoundedIcon />}
             onClick={() => {
-              if (playerTile)
+              if (playerTile) {
                 canvasRef.current?.centerOn(playerTile.x, playerTile.y);
+              }
             }}
             disabled={!playerTile}
             sx={{ display: { xs: "none", sm: "inline-flex" } }}
           >
             My village
           </Button>
+
           <Tooltip title="Refresh map data">
             <IconButton
               onClick={() => query.refetch()}
@@ -170,9 +170,10 @@ export function WorldMapPage() {
             initialCenter={
               playerTile ? { x: playerTile.x, y: playerTile.y } : undefined
             }
-            onSelectTile={setSelectedTile}
-            onHoverTile={setHoveredTile}
+            onSelectTile={(tile) => setSelectedTileId(tile.id)}
+            onHoverTile={(tile) => setHoveredTileId(tile?.id ?? null)}
           />
+
           <Stack
             direction="row"
             alignItems="center"
@@ -182,6 +183,7 @@ export function WorldMapPage() {
             <Typography variant="caption" color="text.secondary">
               Showing {mapData.tiles.length.toLocaleString()} tiles · World 1
             </Typography>
+
             {displayedTile ? (
               <Typography
                 variant="caption"

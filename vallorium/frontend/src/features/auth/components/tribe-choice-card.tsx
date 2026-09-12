@@ -11,7 +11,6 @@ import {
   Typography,
 } from "@mui/material";
 import type { SvgIconProps } from "@mui/material/SvgIcon";
-import type { ComponentType } from "react";
 
 import type { TribeOption } from "@/features/auth/types/auth";
 import { gameTokens } from "@/theme";
@@ -22,16 +21,22 @@ interface TribeChoiceCardProps {
   onSelect: () => void;
 }
 
-type TribeIconComponent = ComponentType<SvgIconProps>;
+interface TribeIconProps extends SvgIconProps {
+  tribeName: string;
+}
 
-const TRIBE_ICONS: Record<string, TribeIconComponent> = {
-  romans: AccountBalanceRoundedIcon,
-  teutons: LocalFireDepartmentRoundedIcon,
-  gauls: ShieldRoundedIcon,
-};
+function TribeIcon({ tribeName, ...props }: TribeIconProps) {
+  const normalizedName = tribeName.trim().toLowerCase();
 
-function getTribeIcon(name: string): TribeIconComponent {
-  return TRIBE_ICONS[name.trim().toLowerCase()] ?? ShieldRoundedIcon;
+  if (normalizedName === "romans") {
+    return <AccountBalanceRoundedIcon {...props} />;
+  }
+
+  if (normalizedName === "teutons") {
+    return <LocalFireDepartmentRoundedIcon {...props} />;
+  }
+
+  return <ShieldRoundedIcon {...props} />;
 }
 
 export function TribeChoiceCard({
@@ -39,7 +44,6 @@ export function TribeChoiceCard({
   selected,
   onSelect,
 }: TribeChoiceCardProps) {
-  const TribeIcon = getTribeIcon(tribe.name);
   const advantages = [...tribe.advantages].sort(
     (left, right) => left.position - right.position,
   );
@@ -108,7 +112,7 @@ export function TribeChoiceCard({
                     : gameTokens.colors.brand.forestSoft,
                 }}
               >
-                <TribeIcon fontSize="small" />
+                <TribeIcon tribeName={tribe.name} fontSize="small" />
               </Box>
 
               <Box sx={{ minWidth: 0 }}>
