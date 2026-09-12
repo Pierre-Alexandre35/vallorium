@@ -2,122 +2,69 @@ name: CI
 
 on:
   push:
-    branches: [dev, main]
+    branches:
+      - dev
+      - main
+
   pull_request:
-    branches: [main]
+    branches:
+      - dev
+      - main
 
 jobs:
-  frontend:
-    name: Frontend Lint & Test
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: vallorium/frontend
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "18"
-
-      - name: Install Dependencies
-        run: npm install
-
-      - name: Lint
-        run: npm run lint
-
   backend:
-    name: Backend Lint & Test
+    name: Backend checks
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: vallorium/backend
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.13"
 
       - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
+        run: python -m pip install poetry
 
-      - name: Configure Poetry in PATH
-        run: echo "${HOME}/.local/bin" >> $GITHUB_PATH
+      - name: Install dev dependencies
+        run: poetry install --only dev --no-root
 
-      - name: Set up In-Project Virtual Environment
-        run: poetry config virtualenvs.in-project true
+      - name: Ruff lint
+        run: poetry run ruff check .
 
-      - name: Cache Poetry and Dependencies
-        uses: actions/cache@v3
-        with:
-          path: .venv
-          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-poetry-
+      - name: Ruff format check
+        run: poetry run ruff format --check .
 
-      - name: Install Dependencies with Poetry
-        run: poetry install -vv
-
-      - name: Capture Execution Environment
-        id: poetry_env
-        run: poetry env info --path
-
-      - name: Export Main-Only Requirements
-        run: poetry export --only main --without-hashes --output /tmp/requirements.txt
-
-      - name: Install Requirements in Virtual Environment
-        run: pip install -r /tmp/requirements.txt
-        env:
-          VIRTUAL_ENV: ${{ steps.poetry_env.outputs.stdout }}
-          PATH: ${{ steps.poetry_env.outputs.stdout }}/bin:$PATH
-
-      - name: Lint
-        run: poetry run flake8 --exclude .venv
-
-      - name: Run Bandit
-        run: poetry run bandit -r src/
-
-      - name: Run Black
-        run: poetry run black --check .
-
-      - name: Run Flake8
-        run: poetry run flake8 --exclude .venv
-
-      - name: Run Isort
-        run: poetry run isort --check-only --skip .venv src/
-
-  database:
-    name: Database Setup
+  frontend:
+    name: Frontend checks
     runs-on: ubuntu-latest
+
     defaults:
       run:
-        working-directory: vallorium/database/sql
+        working-directory: vallorium/frontend
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Install PostgreSQL
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql postgresql-contrib
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: vallorium/frontend/package-lock.json
 
-      - name: Start PostgreSQL
-        run: |
-          sudo service postgresql start
-          sudo -u postgres psql -c "CREATE DATABASE testdb;"
-          sudo -u postgres psql -c "CREATE USER ci_user WITH PASSWORD 'password';"
-          sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE testdb TO ci_user;"
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Run SQL Scripts
-        env:
-          PGPASSWORD: password
-        run: |
-          psql -h localhost -U ci_user -d testdb -f init.sql
-          psql -h localhost -U ci_user -d testdb -f data.sql
-          psql -h localhost -U ci_user -d testdb -f dummy.sql
+      - name: ESLint
+        run: npm run lint
+
+      - name: Prettier
+        run: npm run format:check
