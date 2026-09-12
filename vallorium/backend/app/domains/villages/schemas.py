@@ -1,11 +1,12 @@
 from typing import List
+
 from pydantic import Field, field_validator
 
 from app.common.schemas import AppBaseModel
 from app.domains.map.schemas import MapTileOut
 from app.domains.resources.schemas import (
-    ResourceProduction,
     ResourceBalance,
+    ResourceProduction,
     ResourceTypeOut,
 )
 

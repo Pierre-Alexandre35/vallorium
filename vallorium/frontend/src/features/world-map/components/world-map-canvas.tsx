@@ -83,7 +83,9 @@ function terrainColor(terrain: TerrainType, variant: number): string {
 
 function drawTree(graphics: Graphics, x: number, y: number, scale = 1) {
   const map = gameTokens.colors.map;
-  graphics.rect(x - 1.3 * scale, y + 5 * scale, 2.6 * scale, 5 * scale).fill("#6f5130");
+  graphics
+    .rect(x - 1.3 * scale, y + 5 * scale, 2.6 * scale, 5 * scale)
+    .fill("#6f5130");
   graphics
     .poly([
       x,
@@ -289,7 +291,12 @@ function coordinateToWorldPosition(bounds: MapBounds, x: number, y: number) {
   };
 }
 
-function setScaleAt(runtime: Runtime, nextScale: number, screenX: number, screenY: number) {
+function setScaleAt(
+  runtime: Runtime,
+  nextScale: number,
+  screenX: number,
+  screenY: number,
+) {
   const oldScale = runtime.scale;
   const clampedScale = clamp(nextScale, MIN_SCALE, MAX_SCALE);
   const localX = (screenX - runtime.world.x) / oldScale;
@@ -372,189 +379,200 @@ function bindDomNavigation(runtime: Runtime) {
   };
 }
 
-export const WorldMapCanvas = forwardRef<WorldMapCanvasHandle, WorldMapCanvasProps>(
-  function WorldMapCanvas(
-    { tiles, bounds, selectedTileId, initialCenter, onSelectTile, onHoverTile },
-    ref,
-  ) {
-    const hostRef = useRef<HTMLDivElement | null>(null);
-    const runtimeRef = useRef<Runtime | null>(null);
-    const boundsRef = useRef(bounds);
-    const initialCenterRef = useRef(initialCenter);
-    const onSelectRef = useRef(onSelectTile);
-    const onHoverRef = useRef(onHoverTile);
-    const [isReady, setIsReady] = useState(false);
+export const WorldMapCanvas = forwardRef<
+  WorldMapCanvasHandle,
+  WorldMapCanvasProps
+>(function WorldMapCanvas(
+  { tiles, bounds, selectedTileId, initialCenter, onSelectTile, onHoverTile },
+  ref,
+) {
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const runtimeRef = useRef<Runtime | null>(null);
+  const boundsRef = useRef(bounds);
+  const initialCenterRef = useRef(initialCenter);
+  const onSelectRef = useRef(onSelectTile);
+  const onHoverRef = useRef(onHoverTile);
+  const [isReady, setIsReady] = useState(false);
 
-    boundsRef.current = bounds;
-    initialCenterRef.current = initialCenter;
-    onSelectRef.current = onSelectTile;
-    onHoverRef.current = onHoverTile;
+  boundsRef.current = bounds;
+  initialCenterRef.current = initialCenter;
+  onSelectRef.current = onSelectTile;
+  onHoverRef.current = onHoverTile;
 
-    useImperativeHandle(ref, () => ({
-      zoomIn() {
-        const runtime = runtimeRef.current;
-        if (!runtime) return;
-        setScaleAt(
-          runtime,
-          runtime.scale * 1.18,
-          runtime.app.screen.width / 2,
-          runtime.app.screen.height / 2,
-        );
-      },
-      zoomOut() {
-        const runtime = runtimeRef.current;
-        if (!runtime) return;
-        setScaleAt(
-          runtime,
-          runtime.scale * 0.84,
-          runtime.app.screen.width / 2,
-          runtime.app.screen.height / 2,
-        );
-      },
-      resetView() {
-        const runtime = runtimeRef.current;
-        if (!runtime) return;
-        runtime.scale = 0.78;
-        runtime.world.scale.set(runtime.scale);
-        const center = initialCenterRef.current ?? {
-          x: Math.round((runtime.bounds.minX + runtime.bounds.maxX) / 2),
-          y: Math.round((runtime.bounds.minY + runtime.bounds.maxY) / 2),
-        };
-        centerRuntimeOn(runtime, center.x, center.y);
-      },
-      centerOn(x, y) {
-        const runtime = runtimeRef.current;
-        if (!runtime) return;
-        centerRuntimeOn(runtime, x, y);
-      },
-    }));
-
-    useEffect(() => {
-      const host = hostRef.current;
-      if (!host) return undefined;
-
-      const app = new Application();
-      let cancelled = false;
-      let initialized = false;
-
-      void app
-        .init({
-          resizeTo: host,
-          antialias: true,
-          autoDensity: true,
-          resolution: Math.min(window.devicePixelRatio || 1, 2),
-          backgroundColor: gameTokens.colors.map.canvas,
-          preference: "webgl",
-          powerPreference: "high-performance",
-        })
-        .then(() => {
-          initialized = true;
-          if (cancelled) {
-            app.destroy({ removeView: true }, { children: true });
-            return;
-          }
-
-          host.appendChild(app.canvas);
-          app.stage.eventMode = "static";
-          app.stage.hitArea = app.screen;
-
-          const world = new Container();
-          const selection = new Graphics();
-          world.addChild(selection);
-          app.stage.addChild(world);
-
-          const runtime: Runtime = {
-            app,
-            world,
-            selection,
-            tilePositions: new Map(),
-            bounds: boundsRef.current,
-            scale: 0.78,
-            dragged: false,
-            hasInitialView: false,
-            cleanupDomEvents: () => undefined,
-          };
-          runtime.cleanupDomEvents = bindDomNavigation(runtime);
-          runtimeRef.current = runtime;
-          setIsReady(true);
-        });
-
-      return () => {
-        cancelled = true;
-        const runtime = runtimeRef.current;
-        if (runtime?.app === app) {
-          runtime.cleanupDomEvents();
-          runtimeRef.current = null;
-        }
-        if (initialized) {
-          app.destroy({ removeView: true }, { children: true });
-        }
+  useImperativeHandle(ref, () => ({
+    zoomIn() {
+      const runtime = runtimeRef.current;
+      if (!runtime) return;
+      setScaleAt(
+        runtime,
+        runtime.scale * 1.18,
+        runtime.app.screen.width / 2,
+        runtime.app.screen.height / 2,
+      );
+    },
+    zoomOut() {
+      const runtime = runtimeRef.current;
+      if (!runtime) return;
+      setScaleAt(
+        runtime,
+        runtime.scale * 0.84,
+        runtime.app.screen.width / 2,
+        runtime.app.screen.height / 2,
+      );
+    },
+    resetView() {
+      const runtime = runtimeRef.current;
+      if (!runtime) return;
+      runtime.scale = 0.78;
+      runtime.world.scale.set(runtime.scale);
+      const center = initialCenterRef.current ?? {
+        x: Math.round((runtime.bounds.minX + runtime.bounds.maxX) / 2),
+        y: Math.round((runtime.bounds.minY + runtime.bounds.maxY) / 2),
       };
-    }, []);
-
-    useEffect(() => {
+      centerRuntimeOn(runtime, center.x, center.y);
+    },
+    centerOn(x, y) {
       const runtime = runtimeRef.current;
-      if (!runtime || !isReady) return;
+      if (!runtime) return;
+      centerRuntimeOn(runtime, x, y);
+    },
+  }));
 
-      runtime.bounds = bounds;
-      runtime.tilePositions.clear();
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return undefined;
 
-      for (const child of [...runtime.world.children]) {
-        if (child !== runtime.selection) {
-          runtime.world.removeChild(child);
-          child.destroy({ children: true });
+    const app = new Application();
+    let cancelled = false;
+    let initialized = false;
+
+    void app
+      .init({
+        resizeTo: host,
+        antialias: true,
+        autoDensity: true,
+        resolution: Math.min(window.devicePixelRatio || 1, 2),
+        backgroundColor: gameTokens.colors.map.canvas,
+        preference: "webgl",
+        powerPreference: "high-performance",
+      })
+      .then(() => {
+        initialized = true;
+        if (cancelled) {
+          app.destroy({ removeView: true }, { children: true });
+          return;
         }
-      }
 
-      for (const tile of tiles) {
-        const localX = (tile.x - bounds.minX) * TILE_STEP;
-        const localY = (tile.y - bounds.minY) * TILE_STEP;
-        const display = createTileDisplay(
-          tile,
-          (selected) => onSelectRef.current(selected),
-          (hovered) => onHoverRef.current?.(hovered),
-          () => runtime.dragged,
-        );
-        display.position.set(localX, localY);
-        runtime.tilePositions.set(tile.id, { x: localX, y: localY });
-        runtime.world.addChildAt(display, runtime.world.children.length - 1);
-      }
+        host.appendChild(app.canvas);
+        app.stage.eventMode = "static";
+        app.stage.hitArea = app.screen;
 
-      if (!runtime.hasInitialView) {
-        runtime.world.scale.set(runtime.scale);
-        const center = initialCenterRef.current ?? {
-          x: Math.round((bounds.minX + bounds.maxX) / 2),
-          y: Math.round((bounds.minY + bounds.maxY) / 2),
+        const world = new Container();
+        const selection = new Graphics();
+        world.addChild(selection);
+        app.stage.addChild(world);
+
+        const runtime: Runtime = {
+          app,
+          world,
+          selection,
+          tilePositions: new Map(),
+          bounds: boundsRef.current,
+          scale: 0.78,
+          dragged: false,
+          hasInitialView: false,
+          cleanupDomEvents: () => undefined,
         };
-        centerRuntimeOn(runtime, center.x, center.y);
-        runtime.hasInitialView = true;
-      }
-    }, [bounds, isReady, tiles]);
+        runtime.cleanupDomEvents = bindDomNavigation(runtime);
+        runtimeRef.current = runtime;
+        setIsReady(true);
+      });
 
-    useEffect(() => {
+    return () => {
+      cancelled = true;
       const runtime = runtimeRef.current;
-      if (!runtime || !isReady) return;
+      if (runtime?.app === app) {
+        runtime.cleanupDomEvents();
+        runtimeRef.current = null;
+      }
+      if (initialized) {
+        app.destroy({ removeView: true }, { children: true });
+      }
+    };
+  }, []);
 
-      runtime.selection.clear();
-      if (selectedTileId === null) return;
+  useEffect(() => {
+    const runtime = runtimeRef.current;
+    if (!runtime || !isReady) return;
 
-      const position = runtime.tilePositions.get(selectedTileId);
-      if (!position) return;
+    runtime.bounds = bounds;
+    runtime.tilePositions.clear();
 
-      runtime.selection
-        .roundRect(position.x - 2, position.y - 2, TILE_SIZE + 4, TILE_SIZE + 4, 9)
-        .stroke({ color: gameTokens.colors.map.selection, width: 4 });
-    }, [isReady, selectedTileId, tiles]);
+    for (const child of [...runtime.world.children]) {
+      if (child !== runtime.selection) {
+        runtime.world.removeChild(child);
+        child.destroy({ children: true });
+      }
+    }
 
-    return (
-      <Box ref={hostRef} className={styles.root} aria-label="Interactive world map">
-        {!isReady ? (
-          <div className={styles.loading}>
-            <CircularProgress size={34} />
-          </div>
-        ) : null}
-        <div className={styles.coordinateHint}>Drag to pan · Scroll to zoom</div>
-      </Box>
-    );
-  },
-);
+    for (const tile of tiles) {
+      const localX = (tile.x - bounds.minX) * TILE_STEP;
+      const localY = (tile.y - bounds.minY) * TILE_STEP;
+      const display = createTileDisplay(
+        tile,
+        (selected) => onSelectRef.current(selected),
+        (hovered) => onHoverRef.current?.(hovered),
+        () => runtime.dragged,
+      );
+      display.position.set(localX, localY);
+      runtime.tilePositions.set(tile.id, { x: localX, y: localY });
+      runtime.world.addChildAt(display, runtime.world.children.length - 1);
+    }
+
+    if (!runtime.hasInitialView) {
+      runtime.world.scale.set(runtime.scale);
+      const center = initialCenterRef.current ?? {
+        x: Math.round((bounds.minX + bounds.maxX) / 2),
+        y: Math.round((bounds.minY + bounds.maxY) / 2),
+      };
+      centerRuntimeOn(runtime, center.x, center.y);
+      runtime.hasInitialView = true;
+    }
+  }, [bounds, isReady, tiles]);
+
+  useEffect(() => {
+    const runtime = runtimeRef.current;
+    if (!runtime || !isReady) return;
+
+    runtime.selection.clear();
+    if (selectedTileId === null) return;
+
+    const position = runtime.tilePositions.get(selectedTileId);
+    if (!position) return;
+
+    runtime.selection
+      .roundRect(
+        position.x - 2,
+        position.y - 2,
+        TILE_SIZE + 4,
+        TILE_SIZE + 4,
+        9,
+      )
+      .stroke({ color: gameTokens.colors.map.selection, width: 4 });
+  }, [isReady, selectedTileId, tiles]);
+
+  return (
+    <Box
+      ref={hostRef}
+      className={styles.root}
+      aria-label="Interactive world map"
+    >
+      {!isReady ? (
+        <div className={styles.loading}>
+          <CircularProgress size={34} />
+        </div>
+      ) : null}
+      <div className={styles.coordinateHint}>Drag to pan · Scroll to zoom</div>
+    </Box>
+  );
+});

@@ -6,10 +6,7 @@ import { Button, InputAdornment, Stack, TextField } from "@mui/material";
 import type { RegisterFormValues } from "@/features/auth/types/auth";
 
 interface SignupAccountStepProps {
-  values: Pick<
-    RegisterFormValues,
-    "email" | "password" | "confirmPassword"
-  >;
+  values: Pick<RegisterFormValues, "email" | "password" | "confirmPassword">;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
   onConfirmPasswordChange: (value: string) => void;

@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
 import hashlib
 import json
 import secrets
+from dataclasses import asdict, dataclass
 
 from fastapi import Response
 
 from app.core.config import SESSION_COOKIE_SECURE
 from app.db.redis import redis_client
-
 
 SESSION_COOKIE_NAME = "__session"
 SESSION_TTL_SECONDS = 60 * 60 * 24 * 7

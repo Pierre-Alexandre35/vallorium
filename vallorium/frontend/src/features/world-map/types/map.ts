@@ -1,18 +1,8 @@
 export type ResourceLayoutCode =
-  | "4-4-4-6"
-  | "5-4-4-5"
-  | "4-5-4-5"
-  | "4-4-5-5"
-  | "3-3-3-9"
-  | "1-1-1-15";
+  "4-4-4-6" | "5-4-4-5" | "4-5-4-5" | "4-4-5-5" | "3-3-3-9" | "1-1-1-15";
 
 export type TerrainType =
-  | "meadow"
-  | "forest"
-  | "mountain"
-  | "lake"
-  | "clay"
-  | "iron";
+  "meadow" | "forest" | "mountain" | "lake" | "clay" | "iron";
 
 export type TileOccupant = {
   type: "village" | "oasis";

@@ -15,7 +15,14 @@ export function AuthPageShell({
   formPadding,
 }: AuthPageShellProps) {
   return (
-    <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", py: { xs: 0, md: 4 } }}>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        py: { xs: 0, md: 4 },
+      }}
+    >
       <Container maxWidth="lg" disableGutters sx={{ px: { xs: 0, md: 3 } }}>
         <Paper
           elevation={0}
@@ -29,7 +36,9 @@ export function AuthPageShell({
           }}
         >
           <AuthVisual />
-          <Box sx={{ p: formPadding, display: "grid", alignItems: "center" }}>{children}</Box>
+          <Box sx={{ p: formPadding, display: "grid", alignItems: "center" }}>
+            {children}
+          </Box>
         </Paper>
       </Container>
     </Box>

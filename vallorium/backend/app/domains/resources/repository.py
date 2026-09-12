@@ -3,6 +3,7 @@ from typing import Dict, Sequence
 
 from sqlalchemy import and_, func
 from sqlalchemy.orm import Session, joinedload
+
 import app.db.models as db
 
 
@@ -37,8 +38,6 @@ def load_storages(
         .filter(db.VillageResourceStorage.village_id == village_id)
         .all()
     )
-
-
 
 
 def load_resource_state_with_production(
@@ -83,13 +82,11 @@ def load_resource_state_with_production(
         )
         .join(
             db.ResourcesTypes,
-            db.ResourcesTypes.id
-            == db.VillageResourceStorage.resource_type_id,
+            db.ResourcesTypes.id == db.VillageResourceStorage.resource_type_id,
         )
         .outerjoin(
             production,
-            production.c.resource_type_id
-            == db.VillageResourceStorage.resource_type_id,
+            production.c.resource_type_id == db.VillageResourceStorage.resource_type_id,
         )
         .filter(db.VillageResourceStorage.village_id == village_id)
         .order_by(db.VillageResourceStorage.resource_type_id)
@@ -138,7 +135,4 @@ def get_resource_type_ids(
         db.ResourcesTypes.id,
     ).all()
 
-    return {
-        resource_name: resource_type_id
-        for resource_name, resource_type_id in rows
-    }
+    return {resource_name: resource_type_id for resource_name, resource_type_id in rows}

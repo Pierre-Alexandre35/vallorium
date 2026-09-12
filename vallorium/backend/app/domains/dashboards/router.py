@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+import app.domains.dashboards.service as dashboard_service
 from app.core.auth import get_current_active_user
 from app.core.sessions import SessionUser
 from app.db.session import get_db
 from app.domains.dashboards.schemas import DashboardCurrentOut
-import app.domains.dashboards.service as dashboard_service
-
 
 dashboard_router = APIRouter()
 

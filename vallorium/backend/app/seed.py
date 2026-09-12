@@ -163,8 +163,7 @@ def _enum_from_config(enum_class: type[Any], raw_value: Any) -> Any:
 
     valid = [member.name for member in enum_class]
     raise ValueError(
-        f"Unknown {enum_class.__name__} value {raw_value!r}. "
-        f"Expected one of {valid}."
+        f"Unknown {enum_class.__name__} value {raw_value!r}. Expected one of {valid}."
     )
 
 
@@ -218,7 +217,6 @@ def seed_tribes(sess: Session) -> None:
                 },
             ],
         },
-
         db.Tribe.TEUTONS: {
             "bonus": "Fast looting",
             "playstyle": "Aggressive",
@@ -244,7 +242,6 @@ def seed_tribes(sess: Session) -> None:
                 },
             ],
         },
-
         db.Tribe.GAULS: {
             "bonus": "Great defense",
             "playstyle": "Defensive",
@@ -272,10 +269,7 @@ def seed_tribes(sess: Session) -> None:
         },
     }
 
-    existing = {
-        row.name: row
-        for row in sess.scalars(select(db.TribeAttributes)).all()
-    }
+    existing = {row.name: row for row in sess.scalars(select(db.TribeAttributes)).all()}
 
     created = 0
     updated = 0
@@ -310,15 +304,12 @@ def seed_tribes(sess: Session) -> None:
                 updated += 1
 
         existing_advantages = {
-            advantage.code: advantage
-            for advantage in tribe.advantages
+            advantage.code: advantage for advantage in tribe.advantages
         }
 
         desired_codes: set[str] = set()
 
-        for position, advantage_definition in enumerate(
-            definition["advantages"]
-        ):
+        for position, advantage_definition in enumerate(definition["advantages"]):
             code = advantage_definition["code"]
             desired_codes.add(code)
 
@@ -346,10 +337,7 @@ def seed_tribes(sess: Session) -> None:
 
     sess.flush()
 
-    print(
-        f"✅ Tribes seeded "
-        f"({created} created, {updated} updated)"
-    )
+    print(f"✅ Tribes seeded ({created} created, {updated} updated)")
 
 
 def seed_resources(sess: Session) -> None:
@@ -830,9 +818,7 @@ def _map_tile_type_definitions() -> list[dict[str, Any]]:
         default_code = "layout_" + "_".join(
             str(counts[resource]) for resource in db.Resource
         )
-        default_name = "-".join(
-            str(counts[resource]) for resource in db.Resource
-        )
+        default_name = "-".join(str(counts[resource]) for resource in db.Resource)
 
         code = str(layout_config.get("code", default_code)).strip()
         name = str(layout_config.get("name", default_name)).strip()
@@ -853,9 +839,7 @@ def _map_tile_type_definitions() -> list[dict[str, Any]]:
             db.Resource.IRON: 5,
             db.Resource.CROP: 5,
         }
-        starter_eligible = bool(
-            layout_config.get("starter_eligible", starter_default)
-        )
+        starter_eligible = bool(layout_config.get("starter_eligible", starter_default))
         weight = float(layout_config.get("weight", 1))
         if weight < 0:
             raise ValueError("Map layout weights must be non-negative.")
@@ -921,9 +905,7 @@ def seed_map_tile_types(sess: Session) -> None:
             if changed:
                 updated_types += 1
 
-        existing_slots = {
-            slot.slot_number: slot for slot in tile_type.farm_slots
-        }
+        existing_slots = {slot.slot_number: slot for slot in tile_type.farm_slots}
         desired_slot_numbers: set[int] = set()
 
         for slot_number, resource in enumerate(definition["slots"], start=1):
@@ -1060,10 +1042,7 @@ def seed_map_tiles(sess: Session) -> None:
     sess.add_all(tiles)
     sess.flush()
 
-    print(
-        "✅ Map seeded "
-        f"({len(tiles)} tiles, {constructible_tiles} constructible)"
-    )
+    print(f"✅ Map seeded ({len(tiles)} tiles, {constructible_tiles} constructible)")
 
 
 # ---------------------------------------------------------------------------

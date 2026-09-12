@@ -1,11 +1,12 @@
 # app/repositories/building_repo.py
 from __future__ import annotations
-from typing import Optional, Sequence, Dict
-from sqlalchemy.orm import Session, joinedload
+
+from typing import Dict, Optional, Sequence
+
 from sqlalchemy import asc, case, or_, select
+from sqlalchemy.orm import Session, joinedload
 
 import app.db.models as db
-
 
 _DEFAULT_STORAGE_CAPS: tuple[int, int] | None = None
 

@@ -1,24 +1,22 @@
-from datetime import datetime, timedelta, timezone
 import logging
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
-from fastapi import HTTPException, status
+from datetime import datetime, timedelta, timezone
 
-from app.domains.resources.schemas import ResourceProduction, ResourceBalance
-from app.domains.villages.schemas import (
-    VillageProductionOut,
-    VillageResourceOut,
-    VillageCreate,
-    VillageNameOut,
-    FarmUpgradeOut,
-)
-import app.domains.villages.repository as village_repo
+from fastapi import HTTPException, status
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
 import app.domains.resources.repository as resource_repo
 import app.domains.resources.service as resource_service
-
-
-from app.db.models import Village, UpgradeStatus, Resource, MapTile, VillageFarmPlot
-
+import app.domains.villages.repository as village_repo
+from app.db.models import MapTile, Resource, UpgradeStatus, Village, VillageFarmPlot
+from app.domains.resources.schemas import ResourceBalance, ResourceProduction
+from app.domains.villages.schemas import (
+    FarmUpgradeOut,
+    VillageCreate,
+    VillageNameOut,
+    VillageProductionOut,
+    VillageResourceOut,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +33,9 @@ def initialize_village(
     if len(farm_slots) != 18:
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Map tile type {tile.map_tile_type_id} does not define 18 farm slots.",
+            detail=(
+                f"Map tile type {tile.map_tile_type_id} does not define 18 farm slots."
+            ),
         )
 
     v = village_repo.insert_village(
@@ -522,10 +522,7 @@ def upgrade_farm_level(
         if level_definition is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    f"Level {target_level} is not configured "
-                    "for this farm type."
-                ),
+                detail=(f"Level {target_level} is not configured for this farm type."),
             )
 
         duration_seconds = int(level_definition.construction_time_seconds)

@@ -14,10 +14,30 @@ import {
 } from "@/theme";
 
 const fields = [
-  { icon: <ParkRoundedIcon />, left: "14%", top: "30%", color: gameTokens.colors.auth.forestField },
-  { icon: <LandscapeRoundedIcon />, left: "68%", top: "17%", color: gameTokens.colors.resource.clay },
-  { icon: <GrassRoundedIcon />, left: "72%", top: "66%", color: gameTokens.colors.auth.cropField },
-  { icon: <ParkRoundedIcon />, left: "20%", top: "70%", color: gameTokens.colors.auth.forestField },
+  {
+    icon: <ParkRoundedIcon />,
+    left: "14%",
+    top: "30%",
+    color: gameTokens.colors.auth.forestField,
+  },
+  {
+    icon: <LandscapeRoundedIcon />,
+    left: "68%",
+    top: "17%",
+    color: gameTokens.colors.resource.clay,
+  },
+  {
+    icon: <GrassRoundedIcon />,
+    left: "72%",
+    top: "66%",
+    color: gameTokens.colors.auth.cropField,
+  },
+  {
+    icon: <ParkRoundedIcon />,
+    left: "20%",
+    top: "70%",
+    color: gameTokens.colors.auth.forestField,
+  },
 ];
 
 const visualVariables: GameCssProperties = {
@@ -45,7 +65,14 @@ export function AuthVisual() {
     >
       <GameLogo light />
 
-      <Stack sx={{ position: "relative", zIndex: 2, mt: { xs: 5, md: 8 }, maxWidth: 500 }}>
+      <Stack
+        sx={{
+          position: "relative",
+          zIndex: 2,
+          mt: { xs: 5, md: 8 },
+          maxWidth: 500,
+        }}
+      >
         <Chip
           label="A modern classic strategy experience"
           size="small"
@@ -57,7 +84,10 @@ export function AuthVisual() {
             fontWeight: gameTokens.typography.weight.strong,
           }}
         />
-        <Typography variant="h2" sx={{ mt: 2.5, fontSize: { xs: 40, md: 58 }, lineHeight: 1.02 }}>
+        <Typography
+          variant="h2"
+          sx={{ mt: 2.5, fontSize: { xs: 40, md: 58 }, lineHeight: 1.02 }}
+        >
           Raise a village. Shape an empire.
         </Typography>
         <Typography
@@ -68,7 +98,8 @@ export function AuthVisual() {
             lineHeight: 1.65,
           }}
         >
-          Balance production, plan every upgrade and lead your people from a quiet settlement to the center of the realm.
+          Balance production, plan every upgrade and lead your people from a
+          quiet settlement to the center of the realm.
         </Typography>
       </Stack>
 

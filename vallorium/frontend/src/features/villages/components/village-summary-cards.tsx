@@ -31,10 +31,7 @@ function cardItems(villages: VillageRow[]) {
     },
     {
       label: "Total population",
-      value: villages.reduce(
-        (total, village) => total + village.population,
-        0,
-      ),
+      value: villages.reduce((total, village) => total + village.population, 0),
     },
     {
       label: "Wood / h",
@@ -61,20 +58,10 @@ export function VillageSummaryCards({ villages }: Props) {
   return (
     <Grid container spacing={2}>
       {items.map((item) => (
-        <Grid
-          key={item.label}
-          size={{ xs: 12, sm: 6, md: 4, lg: 2 }}
-        >
-          <Card
-            variant="outlined"
-            sx={{ height: "100%" }}
-          >
+        <Grid key={item.label} size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
+          <Card variant="outlined" sx={{ height: "100%" }}>
             <CardContent>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                gutterBottom
-              >
+              <Typography variant="body2" color="text.secondary" gutterBottom>
                 {item.label}
               </Typography>
 

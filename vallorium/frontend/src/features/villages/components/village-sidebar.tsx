@@ -14,7 +14,11 @@ export function VillageSidebar({ village }: { village: VillageRow }) {
   return (
     <Stack spacing={2}>
       <GamePanel sx={{ p: 2 }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+        >
           <Typography
             variant="overline"
             color="text.secondary"
@@ -22,7 +26,11 @@ export function VillageSidebar({ village }: { village: VillageRow }) {
           >
             Current village
           </Typography>
-          <Button size="small" sx={{ minWidth: 0, px: 1 }} aria-label="Add village">
+          <Button
+            size="small"
+            sx={{ minWidth: 0, px: 1 }}
+            aria-label="Add village"
+          >
             <AddRoundedIcon fontSize="small" />
           </Button>
         </Stack>
@@ -46,7 +54,10 @@ export function VillageSidebar({ village }: { village: VillageRow }) {
               <CastleRoundedIcon />
             </IconTile>
             <Box minWidth={0} flex={1}>
-              <Typography fontWeight={gameTokens.typography.weight.heavy} noWrap>
+              <Typography
+                fontWeight={gameTokens.typography.weight.heavy}
+                noWrap
+              >
                 {village.name}
               </Typography>
               <Typography
@@ -61,25 +72,43 @@ export function VillageSidebar({ village }: { village: VillageRow }) {
         </Box>
 
         <Stack spacing={1.25} sx={{ mt: 2 }}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+          >
             <Stack direction="row" spacing={1} alignItems="center">
-              <LocationOnRoundedIcon sx={{ fontSize: 18, color: "text.secondary" }} />
+              <LocationOnRoundedIcon
+                sx={{ fontSize: 18, color: "text.secondary" }}
+              />
               <Typography variant="body2" color="text.secondary">
                 Coordinates
               </Typography>
             </Stack>
-            <Typography variant="body2" fontWeight={gameTokens.typography.weight.bold}>
+            <Typography
+              variant="body2"
+              fontWeight={gameTokens.typography.weight.bold}
+            >
               {village.coordinates}
             </Typography>
           </Stack>
-          <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+          >
             <Stack direction="row" spacing={1} alignItems="center">
-              <GroupRoundedIcon sx={{ fontSize: 18, color: "text.secondary" }} />
+              <GroupRoundedIcon
+                sx={{ fontSize: 18, color: "text.secondary" }}
+              />
               <Typography variant="body2" color="text.secondary">
                 Population
               </Typography>
             </Stack>
-            <Typography variant="body2" fontWeight={gameTokens.typography.weight.bold}>
+            <Typography
+              variant="body2"
+              fontWeight={gameTokens.typography.weight.bold}
+            >
               {village.population}
             </Typography>
           </Stack>
@@ -95,7 +124,11 @@ export function VillageSidebar({ village }: { village: VillageRow }) {
           Protection
         </Typography>
         <Divider sx={{ my: 1.5 }} />
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+        >
           <Box>
             <Typography fontWeight={gameTokens.typography.weight.bold}>
               Beginner&apos;s protection

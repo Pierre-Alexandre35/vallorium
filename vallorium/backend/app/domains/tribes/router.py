@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+import app.domains.tribes.services as tribe_service
 from app.db.session import get_db
 from app.domains.tribes.schemas import TribeOut
-import app.domains.tribes.services as tribe_service
-
 
 tribes_router = APIRouter()
 

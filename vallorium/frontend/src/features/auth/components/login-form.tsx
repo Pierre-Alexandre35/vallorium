@@ -16,7 +16,8 @@ import { useLoginForm } from "@/features/auth/hooks/use-login-form";
 import { gameTokens } from "@/theme";
 
 export function LoginForm() {
-  const { values, error, isSubmitting, handleSubmit, updateField } = useLoginForm();
+  const { values, error, isSubmitting, handleSubmit, updateField } =
+    useLoginForm();
 
   return (
     <Box component="form" onSubmit={handleSubmit} noValidate>
@@ -66,8 +67,17 @@ export function LoginForm() {
           }}
         />
 
-        <Button type="submit" variant="contained" size="large" disabled={isSubmitting}>
-          {isSubmitting ? <CircularProgress size={23} color="inherit" /> : "Enter the realm"}
+        <Button
+          type="submit"
+          variant="contained"
+          size="large"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <CircularProgress size={23} color="inherit" />
+          ) : (
+            "Enter the realm"
+          )}
         </Button>
 
         <Typography variant="body2" color="text.secondary" textAlign="center">

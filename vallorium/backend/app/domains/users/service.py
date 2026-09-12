@@ -1,12 +1,13 @@
 # app/services/user_service.py
 from typing import List, Optional
-from sqlalchemy.orm import Session
+
 from fastapi import HTTPException, status
-from app.db.models import User
+from sqlalchemy.orm import Session
 
 import app.domains.users.repository as user_repo
-from app.domains.users.schemas import UserOut, UserCreate
 from app.core.security import get_password_hash
+from app.db.models import User
+from app.domains.users.schemas import UserCreate, UserOut
 
 
 def list_users(db: Session, skip=0, limit=100) -> List[UserOut]:

@@ -1,5 +1,7 @@
 from typing import Optional, Sequence
+
 from sqlalchemy.orm import Session, joinedload
+
 import app.db.models as db
 
 
@@ -34,7 +36,7 @@ def insert_user(
     first_name: str | None,
     last_name: str | None,
     is_active: bool,
-    is_superuser: bool
+    is_superuser: bool,
 ) -> db.User:
     u = db.User(
         email=email,

@@ -34,4 +34,12 @@ email-validator = "^2.3.0"
 
 [tool.poetry.group.dev.dependencies]
 ipython = "^9.15.0"
+ruff = "^0.16.7"
 
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]

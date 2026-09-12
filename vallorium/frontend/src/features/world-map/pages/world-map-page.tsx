@@ -15,19 +15,19 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { GamePanel } from "@/components/ui/game-panel";
 import { MapLegend } from "@/features/world-map/components/map-legend";
+import { TileDetailsPanel } from "@/features/world-map/components/tile-details-panel";
 import {
   WorldMapCanvas,
   type WorldMapCanvasHandle,
 } from "@/features/world-map/components/world-map-canvas";
-import { TileDetailsPanel } from "@/features/world-map/components/tile-details-panel";
 import { createDemoWorldMap } from "@/features/world-map/data/demo-world";
 import { useWorldMapData } from "@/features/world-map/hooks/use-world-map-data";
-import type { MapBounds, WorldMapTile } from "@/features/world-map/types/map";
+import type { MapBounds } from "@/features/world-map/types/map";
 import { gameTokens } from "@/theme";
 
 const MAP_BOUNDS: MapBounds = {
@@ -40,24 +40,24 @@ const MAP_BOUNDS: MapBounds = {
 export function WorldMapPage() {
   const navigate = useNavigate();
   const canvasRef = useRef<WorldMapCanvasHandle | null>(null);
+
   const query = useWorldMapData(1, MAP_BOUNDS);
   const previewData = useMemo(() => createDemoWorldMap(MAP_BOUNDS), []);
   const mapData = query.data ?? previewData;
-  const playerTile = mapData.tiles.find((tile) => tile.occupant?.isCurrentPlayer) ?? null;
-  const [selectedTile, setSelectedTile] = useState<WorldMapTile | null>(playerTile);
-  const [hoveredTile, setHoveredTile] = useState<WorldMapTile | null>(null);
 
-  useEffect(() => {
-    setHoveredTile(null);
-    setSelectedTile((current) => {
-      if (current) {
-        const refreshed = mapData.tiles.find((tile) => tile.id === current.id);
-        if (refreshed) return refreshed;
-      }
+  const playerTile =
+    mapData.tiles.find((tile) => tile.occupant?.isCurrentPlayer) ?? null;
 
-      return mapData.tiles.find((tile) => tile.occupant?.isCurrentPlayer) ?? null;
-    });
-  }, [mapData]);
+  const [selectedTileId, setSelectedTileId] = useState<string | null>(
+    playerTile?.id ?? null,
+  );
+  const [hoveredTileId, setHoveredTileId] = useState<string | null>(null);
+
+  const selectedTile =
+    mapData.tiles.find((tile) => tile.id === selectedTileId) ?? playerTile;
+
+  const hoveredTile =
+    mapData.tiles.find((tile) => tile.id === hoveredTileId) ?? null;
 
   const displayedTile = hoveredTile ?? selectedTile;
 
@@ -68,7 +68,8 @@ export function WorldMapPage() {
     >
       {query.isError ? (
         <Alert severity="info" sx={{ mb: 2 }}>
-          The map API is unavailable, so this page is rendering the supplied resource-layout data as a local 100×100 preview world.
+          The map API is unavailable, so this page is rendering the supplied
+          resource-layout data as a local 100×100 preview world.
         </Alert>
       ) : null}
 
@@ -92,7 +93,8 @@ export function WorldMapPage() {
                 <Typography variant="h4">World map</Typography>
               </Stack>
               <Typography color="text.secondary" sx={{ mt: 0.35 }}>
-                Explore tiles, inspect field layouts, and find your next settlement.
+                Explore tiles, inspect field layouts, and find your next
+                settlement.
               </Typography>
             </>
           )}
@@ -100,33 +102,51 @@ export function WorldMapPage() {
 
         <Stack direction="row" spacing={0.75} alignItems="center">
           <Tooltip title="Zoom out">
-            <IconButton onClick={() => canvasRef.current?.zoomOut()} aria-label="Zoom out">
+            <IconButton
+              onClick={() => canvasRef.current?.zoomOut()}
+              aria-label="Zoom out"
+            >
               <ZoomOutRoundedIcon />
             </IconButton>
           </Tooltip>
+
           <Tooltip title="Zoom in">
-            <IconButton onClick={() => canvasRef.current?.zoomIn()} aria-label="Zoom in">
+            <IconButton
+              onClick={() => canvasRef.current?.zoomIn()}
+              aria-label="Zoom in"
+            >
               <ZoomInRoundedIcon />
             </IconButton>
           </Tooltip>
+
           <Tooltip title="Reset view">
-            <IconButton onClick={() => canvasRef.current?.resetView()} aria-label="Reset map view">
+            <IconButton
+              onClick={() => canvasRef.current?.resetView()}
+              aria-label="Reset map view"
+            >
               <CenterFocusStrongRoundedIcon />
             </IconButton>
           </Tooltip>
+
           <Button
             variant="outlined"
             startIcon={<MyLocationRoundedIcon />}
             onClick={() => {
-              if (playerTile) canvasRef.current?.centerOn(playerTile.x, playerTile.y);
+              if (playerTile) {
+                canvasRef.current?.centerOn(playerTile.x, playerTile.y);
+              }
             }}
             disabled={!playerTile}
             sx={{ display: { xs: "none", sm: "inline-flex" } }}
           >
             My village
           </Button>
+
           <Tooltip title="Refresh map data">
-            <IconButton onClick={() => query.refetch()} aria-label="Refresh map data">
+            <IconButton
+              onClick={() => query.refetch()}
+              aria-label="Refresh map data"
+            >
               <RefreshRoundedIcon />
             </IconButton>
           </Tooltip>
@@ -147,10 +167,13 @@ export function WorldMapPage() {
             tiles={mapData.tiles}
             bounds={mapData.bounds}
             selectedTileId={selectedTile?.id ?? null}
-            initialCenter={playerTile ? { x: playerTile.x, y: playerTile.y } : undefined}
-            onSelectTile={setSelectedTile}
-            onHoverTile={setHoveredTile}
+            initialCenter={
+              playerTile ? { x: playerTile.x, y: playerTile.y } : undefined
+            }
+            onSelectTile={(tile) => setSelectedTileId(tile.id)}
+            onHoverTile={(tile) => setHoveredTileId(tile?.id ?? null)}
           />
+
           <Stack
             direction="row"
             alignItems="center"
@@ -160,9 +183,14 @@ export function WorldMapPage() {
             <Typography variant="caption" color="text.secondary">
               Showing {mapData.tiles.length.toLocaleString()} tiles · World 1
             </Typography>
+
             {displayedTile ? (
-              <Typography variant="caption" fontWeight={gameTokens.typography.weight.bold}>
-                {displayedTile.x} | {displayedTile.y} · {displayedTile.resourceLayout}
+              <Typography
+                variant="caption"
+                fontWeight={gameTokens.typography.weight.bold}
+              >
+                {displayedTile.x} | {displayedTile.y} ·{" "}
+                {displayedTile.resourceLayout}
               </Typography>
             ) : null}
           </Stack>

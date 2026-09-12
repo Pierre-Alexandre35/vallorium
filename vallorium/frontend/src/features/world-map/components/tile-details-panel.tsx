@@ -6,14 +6,7 @@ import LocationOnRoundedIcon from "@mui/icons-material/LocationOnRounded";
 import ParkRoundedIcon from "@mui/icons-material/ParkRounded";
 import TerrainRoundedIcon from "@mui/icons-material/TerrainRounded";
 import ConstructionRoundedIcon from "@mui/icons-material/ConstructionRounded";
-import {
-  Box,
-  Button,
-  Chip,
-  Divider,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Box, Button, Chip, Divider, Stack, Typography } from "@mui/material";
 
 import { GamePanel } from "@/components/ui/game-panel";
 import {
@@ -55,7 +48,10 @@ function ResourceAmount({
       <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
         {label}
       </Typography>
-      <Typography variant="body2" fontWeight={gameTokens.typography.weight.bold}>
+      <Typography
+        variant="body2"
+        fontWeight={gameTokens.typography.weight.bold}
+      >
         {amount}
       </Typography>
     </Stack>
@@ -75,7 +71,8 @@ export function TileDetailsPanel({
           Select a tile
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          Click any position on the map to inspect its terrain and resource fields.
+          Click any position on the map to inspect its terrain and resource
+          fields.
         </Typography>
       </GamePanel>
     );
@@ -92,7 +89,12 @@ export function TileDetailsPanel({
           background: `linear-gradient(135deg, ${gameTokens.colors.brand.forestSoft}, ${gameTokens.colors.surface.paper})`,
         }}
       >
-        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={2}>
+        <Stack
+          direction="row"
+          alignItems="flex-start"
+          justifyContent="space-between"
+          spacing={2}
+        >
           <Box>
             <Typography variant="overline" color="primary.main">
               Selected tile
@@ -112,16 +114,27 @@ export function TileDetailsPanel({
 
       <Box sx={{ p: 2.25 }}>
         <Stack spacing={1.25}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+          >
             <Typography variant="body2" color="text.secondary">
               Terrain
             </Typography>
-            <Typography variant="body2" fontWeight={gameTokens.typography.weight.bold}>
+            <Typography
+              variant="body2"
+              fontWeight={gameTokens.typography.weight.bold}
+            >
               {terrainLabels[tile.terrain]}
             </Typography>
           </Stack>
 
-          <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+          >
             <Typography variant="body2" color="text.secondary">
               Resource layout
             </Typography>
@@ -176,13 +189,17 @@ export function TileDetailsPanel({
                   <TerrainRoundedIcon color="warning" fontSize="small" />
                 )}
                 <Typography variant="subtitle2">
-                  {tile.occupant.type === "village" ? "Occupied village" : "Wild oasis"}
+                  {tile.occupant.type === "village"
+                    ? "Occupied village"
+                    : "Wild oasis"}
                 </Typography>
               </Stack>
               {tile.occupant.ownerName ? (
                 <Typography variant="body2" color="text.secondary">
                   Owner: {tile.occupant.ownerName}
-                  {tile.occupant.allianceTag ? ` · [${tile.occupant.allianceTag}]` : ""}
+                  {tile.occupant.allianceTag
+                    ? ` · [${tile.occupant.allianceTag}]`
+                    : ""}
                 </Typography>
               ) : null}
               {tile.occupant.population ? (
@@ -199,7 +216,11 @@ export function TileDetailsPanel({
             Center map here
           </Button>
           {tile.occupant?.isCurrentPlayer ? (
-            <Button variant="contained" startIcon={<CastleRoundedIcon />} onClick={onOpenVillage}>
+            <Button
+              variant="contained"
+              startIcon={<CastleRoundedIcon />}
+              onClick={onOpenVillage}
+            >
               Open village
             </Button>
           ) : (

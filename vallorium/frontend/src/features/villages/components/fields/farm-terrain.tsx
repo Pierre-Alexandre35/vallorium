@@ -60,9 +60,7 @@ export function FarmTerrain({
   onSelectFarm,
 }: FarmTerrainProps) {
   const idPrefix = useId().replaceAll(":", "");
-  const plotsByNumber = new Map(
-    plots.map((plot) => [plot.farmNumber, plot]),
-  );
+  const plotsByNumber = new Map(plots.map((plot) => [plot.farmNumber, plot]));
 
   return (
     <svg

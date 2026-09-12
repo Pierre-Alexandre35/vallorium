@@ -1,10 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db
-import app.domains.tribes.services as tribe_service
 import app.domains.buildings.service as building_service
-
+import app.domains.tribes.services as tribe_service
+from app.db.session import get_db
 from app.domains.buildings.schemas import BuildingCatalogOut
 from app.utils.cache import cached_response
 

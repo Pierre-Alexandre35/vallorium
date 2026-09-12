@@ -1,4 +1,5 @@
 from typing import Optional
+
 from app.common.schemas import AppBaseModel
 from app.domains.tribes.schemas import TribeOut
 

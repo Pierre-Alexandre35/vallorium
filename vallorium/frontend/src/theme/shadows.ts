@@ -9,7 +9,8 @@ export const gameShadows = {
   authMap: "0 34px 80px rgba(0,0,0,.33), inset 0 0 0 2px rgba(255,255,255,.14)",
   authField: "0 7px 14px rgba(0,0,0,.25)",
   authVillageCenter: "0 13px 25px rgba(0,0,0,.28)",
-  villageMap: "inset 0 0 0 10px rgba(255,255,255,.18), 0 20px 45px rgba(73, 67, 43, .12)",
+  villageMap:
+    "inset 0 0 0 10px rgba(255,255,255,.18), 0 20px 45px rgba(73, 67, 43, .12)",
   villageMapInner: "inset 0 0 0 12px rgba(255,255,255,.16)",
   villageLevel: "0 3px 7px rgba(0,0,0,.18)",
   villageCenter: "0 14px 24px rgba(73, 54, 24, .28)",

@@ -1,0 +1,32 @@
+repos:
+  # -------------------------
+  # Backend: Python / Ruff
+  # -------------------------
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.7
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+        files: ^vallorium/backend/
+
+      - id: ruff-format
+        files: ^vallorium/backend/
+
+  # -------------------------
+  # Frontend: ESLint / Prettier
+  # -------------------------
+  - repo: local
+    hooks:
+      - id: eslint
+        name: ESLint
+        entry: npm --prefix vallorium/frontend run lint:fix
+        language: system
+        files: ^vallorium/frontend/.*\.(js|jsx|ts|tsx)$
+        pass_filenames: false
+
+      - id: prettier
+        name: Prettier
+        entry: npm --prefix vallorium/frontend run format
+        language: system
+        files: ^vallorium/frontend/
+        pass_filenames: false

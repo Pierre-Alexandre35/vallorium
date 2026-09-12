@@ -14,10 +14,13 @@ export function ProtectedRoute() {
 
   if (currentUser.isError) {
     return (
-      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center", p: 3 }}>
+      <Box
+        sx={{ minHeight: "100vh", display: "grid", placeItems: "center", p: 3 }}
+      >
         <Stack spacing={2} sx={{ width: "100%", maxWidth: 480 }}>
           <Alert severity="error">
-            We could not verify your session. Check your connection and try again.
+            We could not verify your session. Check your connection and try
+            again.
           </Alert>
           <Button
             variant="contained"

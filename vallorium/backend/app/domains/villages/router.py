@@ -1,29 +1,26 @@
-from fastapi import APIRouter, Depends,
-from sqlalchemy.orm import Session
+from dataclasses import replace
 from typing import List
 
-from app.db.session import get_db
+from fastapi import APIRouter, Cookie, Depends
+from sqlalchemy.orm import Session
+
 import app.domains.villages.service as village_service
+from app.core.auth import get_current_active_user
+from app.core.sessions import (
+    SESSION_COOKIE_NAME,
+    SessionUser,
+    refresh_session_user,
+)
+from app.db.session import get_db
 from app.domains.villages.schemas import (
+    FarmUpgradeOut,
     VillageCreate,
+    VillageFarmOut,
     VillageNameOut,
     VillageNameUpdate,
     VillageOut,
     VillageProductionOut,
     VillageResourceOut,
-    FarmUpgradeOut,
-    VillageFarmOut
-)
-from app.core.auth import get_current_active_user
-from app.core.sessions import SessionUser
-from dataclasses import replace
-
-from fastapi import APIRouter, Cookie, Depends
-
-from app.core.sessions import (
-    SESSION_COOKIE_NAME,
-    SessionUser,
-    refresh_session_user,
 )
 
 village_router = APIRouter()
@@ -49,10 +46,7 @@ def village_create(
         owner_id=current_user.id,
     )
 
-    if (
-        current_user.current_village_id is None
-        and session_id is not None
-    ):
+    if current_user.current_village_id is None and session_id is not None:
         updated_session = replace(
             current_user,
             current_village_id=created_village.id,
@@ -64,6 +58,7 @@ def village_create(
         )
 
     return created_village
+
 
 @village_router.get(
     "/villages/",

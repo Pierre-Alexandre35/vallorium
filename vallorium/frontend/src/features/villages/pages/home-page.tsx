@@ -41,7 +41,10 @@ export function HomePage() {
     return (
       <Container
         maxWidth={false}
-        sx={{ maxWidth: gameTokens.layout.contentMaxWidth, pt: { xs: 2, md: 3 } }}
+        sx={{
+          maxWidth: gameTokens.layout.contentMaxWidth,
+          pt: { xs: 2, md: 3 },
+        }}
       >
         <Alert
           severity="error"
@@ -66,9 +69,14 @@ export function HomePage() {
     return (
       <Container
         maxWidth={false}
-        sx={{ maxWidth: gameTokens.layout.contentMaxWidth, pt: { xs: 2, md: 3 } }}
+        sx={{
+          maxWidth: gameTokens.layout.contentMaxWidth,
+          pt: { xs: 2, md: 3 },
+        }}
       >
-        <Alert severity="info">No villages are available for this account yet.</Alert>
+        <Alert severity="info">
+          No villages are available for this account yet.
+        </Alert>
       </Container>
     );
   }
@@ -77,7 +85,10 @@ export function HomePage() {
     return (
       <Container
         maxWidth={false}
-        sx={{ maxWidth: gameTokens.layout.contentMaxWidth, pt: { xs: 2, md: 3 } }}
+        sx={{
+          maxWidth: gameTokens.layout.contentMaxWidth,
+          pt: { xs: 2, md: 3 },
+        }}
       >
         <Stack spacing={2}>
           <Box>
@@ -97,7 +108,10 @@ export function HomePage() {
     return (
       <Container
         maxWidth={false}
-        sx={{ maxWidth: gameTokens.layout.contentMaxWidth, pt: { xs: 2, md: 3 } }}
+        sx={{
+          maxWidth: gameTokens.layout.contentMaxWidth,
+          pt: { xs: 2, md: 3 },
+        }}
       >
         <Alert severity="info">The current village could not be loaded.</Alert>
       </Container>
@@ -116,10 +130,7 @@ export function HomePage() {
         sx={{ mb: 2 }}
       >
         <Box>
-          <EditableVillageName
-            villageId={village.id}
-            name={village.name}
-          />
+          <EditableVillageName villageId={village.id} name={village.name} />
           <Typography color="text.secondary" sx={{ mt: 0.35 }}>
             {currentUser.data?.tribe_name ?? "Unknown"} village
           </Typography>

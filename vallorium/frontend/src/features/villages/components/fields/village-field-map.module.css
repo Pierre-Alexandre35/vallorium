@@ -28,8 +28,16 @@
   pointer-events: none;
   border-radius: 50%;
   background:
-    radial-gradient(circle at 38% 24%, rgba(255, 255, 255, 0.2), transparent 25%),
-    radial-gradient(circle at 50% 50%, transparent 66%, rgba(45, 63, 36, 0.13) 100%);
+    radial-gradient(
+      circle at 38% 24%,
+      rgba(255, 255, 255, 0.2),
+      transparent 25%
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      transparent 66%,
+      rgba(45, 63, 36, 0.13) 100%
+    );
   mix-blend-mode: soft-light;
 }
 

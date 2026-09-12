@@ -71,9 +71,7 @@ export function VillageFieldMap({ villageId }: VillageFieldMapProps) {
   const { data: farms = [], isLoading, isError } = useVillageFarms(villageId);
   const upgradeFarmMutation = useUpgradeFarm(villageId);
 
-  const farmsByNumber = new Map(
-    farms.map((farm) => [farm.farm_number, farm]),
-  );
+  const farmsByNumber = new Map(farms.map((farm) => [farm.farm_number, farm]));
 
   const plots: FieldPlot[] = farmFieldLayout.flatMap((layoutSlot) => {
     const farm = farmsByNumber.get(layoutSlot.farmNumber);
@@ -167,7 +165,8 @@ export function VillageFieldMap({ villageId }: VillageFieldMapProps) {
           <ResourceIcon resource={selected.resource} size={42} soft />
           <Box>
             <Typography fontWeight={gameTokens.typography.weight.heavy}>
-              {resourceMeta[selected.resource].label} field · Level {selected.level}
+              {resourceMeta[selected.resource].label} field · Level{" "}
+              {selected.level}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Next level adds +{selected.level * 8 + 34}/h production
@@ -175,10 +174,14 @@ export function VillageFieldMap({ villageId }: VillageFieldMapProps) {
           </Box>
         </Stack>
 
-        <Button variant="contained" startIcon={<ArrowUpwardRoundedIcon/>}  onClick={() => upgradeFarmMutation.mutate(selected.id)} >
-            {upgradeFarmMutation.isPending
-    ? "Upgrading..."
-    : `Upgrade to ${selected.level + 1}`}
+        <Button
+          variant="contained"
+          startIcon={<ArrowUpwardRoundedIcon />}
+          onClick={() => upgradeFarmMutation.mutate(selected.id)}
+        >
+          {upgradeFarmMutation.isPending
+            ? "Upgrading..."
+            : `Upgrade to ${selected.level + 1}`}
         </Button>
       </Stack>
     </GamePanel>

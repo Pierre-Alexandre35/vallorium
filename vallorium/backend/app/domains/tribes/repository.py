@@ -7,9 +7,7 @@ import app.db.models as db
 def get_all(db_sess: Session) -> list[db.TribeAttributes]:
     stmt = (
         select(db.TribeAttributes)
-        .options(
-            selectinload(db.TribeAttributes.advantages)
-        )
+        .options(selectinload(db.TribeAttributes.advantages))
         .order_by(db.TribeAttributes.id)
     )
 
@@ -22,9 +20,7 @@ def get_by_id(
 ) -> db.TribeAttributes | None:
     stmt = (
         select(db.TribeAttributes)
-        .options(
-            selectinload(db.TribeAttributes.advantages)
-        )
+        .options(selectinload(db.TribeAttributes.advantages))
         .where(db.TribeAttributes.id == tribe_id)
     )
 

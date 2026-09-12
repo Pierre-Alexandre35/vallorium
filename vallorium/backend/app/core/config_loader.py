@@ -1,9 +1,8 @@
-import yaml
 from pathlib import Path
 
-CONFIG_PATH = (
-    Path(__file__).resolve().parent.parent / "config" / "game_config.yaml"
-)
+import yaml
+
+CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "game_config.yaml"
 
 
 def load_game_config() -> dict:
