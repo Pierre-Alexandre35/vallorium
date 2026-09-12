@@ -27,7 +27,7 @@ import {
 } from "@/features/world-map/components/world-map-canvas";
 import { createDemoWorldMap } from "@/features/world-map/data/demo-world";
 import { useWorldMapData } from "@/features/world-map/hooks/use-world-map-data";
-import type { MapBounds } from "@/features/world-map/types/map";
+import type { MapBounds, WorldMapTile } from "@/features/world-map/types/map";
 import { gameTokens } from "@/theme";
 
 const MAP_BOUNDS: MapBounds = {
@@ -48,10 +48,13 @@ export function WorldMapPage() {
   const playerTile =
     mapData.tiles.find((tile) => tile.occupant?.isCurrentPlayer) ?? null;
 
-  const [selectedTileId, setSelectedTileId] = useState<string | null>(
-    playerTile?.id ?? null,
+  const [selectedTileId, setSelectedTileId] = useState<
+    WorldMapTile["id"] | null
+  >(playerTile?.id ?? null);
+
+  const [hoveredTileId, setHoveredTileId] = useState<WorldMapTile["id"] | null>(
+    null,
   );
-  const [hoveredTileId, setHoveredTileId] = useState<string | null>(null);
 
   const selectedTile =
     mapData.tiles.find((tile) => tile.id === selectedTileId) ?? playerTile;
@@ -92,6 +95,7 @@ export function WorldMapPage() {
                 <MapRoundedIcon color="primary" />
                 <Typography variant="h4">World map</Typography>
               </Stack>
+
               <Typography color="text.secondary" sx={{ mt: 0.35 }}>
                 Explore tiles, inspect field layouts, and find your next
                 settlement.
@@ -156,7 +160,10 @@ export function WorldMapPage() {
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", xl: "minmax(0, 1fr) 320px" },
+          gridTemplateColumns: {
+            xs: "1fr",
+            xl: "minmax(0, 1fr) 320px",
+          },
           gap: 2,
           alignItems: "start",
         }}
@@ -168,7 +175,12 @@ export function WorldMapPage() {
             bounds={mapData.bounds}
             selectedTileId={selectedTile?.id ?? null}
             initialCenter={
-              playerTile ? { x: playerTile.x, y: playerTile.y } : undefined
+              playerTile
+                ? {
+                    x: playerTile.x,
+                    y: playerTile.y,
+                  }
+                : undefined
             }
             onSelectTile={(tile) => setSelectedTileId(tile.id)}
             onHoverTile={(tile) => setHoveredTileId(tile?.id ?? null)}
@@ -202,6 +214,7 @@ export function WorldMapPage() {
             onCenter={(tile) => canvasRef.current?.centerOn(tile.x, tile.y)}
             onOpenVillage={() => navigate("/app")}
           />
+
           <MapLegend />
         </Stack>
       </Box>
