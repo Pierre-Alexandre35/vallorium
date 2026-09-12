@@ -42,3 +42,4 @@ target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
+ignore = ["E501"]
