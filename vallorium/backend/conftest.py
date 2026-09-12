@@ -1,13 +1,14 @@
-import pytest
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy_utils import database_exists, create_database, drop_database
-from fastapi.testclient import TestClient
 import typing as t
 
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy_utils import create_database, database_exists, drop_database
+
 from app.core import config, security
-from app.db.session import Base, get_db
 from app.db import models
+from app.db.session import Base, get_db
 from app.main import app
 
 
@@ -30,9 +31,7 @@ def test_db():
     trans = connection.begin()
 
     # Run a parent transaction that can roll back all changes
-    test_session_maker = sessionmaker(
-        autocommit=False, autoflush=False, bind=engine
-    )
+    test_session_maker = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     test_session = test_session_maker()
     test_session.begin_nested()
 
@@ -59,9 +58,9 @@ def create_test_db():
     test_db_url = get_test_db_url()
 
     # Create the test database
-    assert not database_exists(
-        test_db_url
-    ), "Test database already exists. Aborting tests."
+    assert not database_exists(test_db_url), (
+        "Test database already exists. Aborting tests."
+    )
     create_database(test_db_url)
     test_engine = create_engine(test_db_url)
     Base.metadata.create_all(test_engine)

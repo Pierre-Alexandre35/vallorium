@@ -1,9 +1,8 @@
 import logging
 
+import app.domains.villages.service as village_service
 from app.core.celery_app import celery_app
 from app.db.session import SessionLocal
-import app.domains.villages.service as village_service
-
 
 logger = logging.getLogger(__name__)
 

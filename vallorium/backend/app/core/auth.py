@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from fastapi import Cookie, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
 import app.db.models as models
 import app.db.session as session
-
+import app.domains.users.service as user_service
+import app.domains.villages.repository as village_repo
 from app.core import security
 from app.core.sessions import (
     SESSION_COOKIE_NAME,
@@ -12,10 +14,6 @@ from app.core.sessions import (
     get_session_user,
     refresh_session_user,
 )
-import app.domains.users.service as user_service
-import app.domains.villages.repository as village_repo
-
-from sqlalchemy.orm import Session
 
 
 def _enum_value(value: object | None) -> str | None:
@@ -123,6 +121,7 @@ def get_current_active_superuser(
         )
 
     return user
+
 
 def authenticate_user(
     db,

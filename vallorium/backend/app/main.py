@@ -1,17 +1,17 @@
-from contextlib import asynccontextmanager
 import logging
 import time
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 import app.core.config as settings
-from app.domains.users.router import users_router
 from app.domains.auth.router import auth_router
-from app.domains.villages.router import village_router
-from app.domains.tribes.router import tribes_router
 from app.domains.buildings.router import building_router
 from app.domains.dashboards.router import dashboard_router
+from app.domains.tribes.router import tribes_router
+from app.domains.users.router import users_router
+from app.domains.villages.router import village_router
 
 
 @asynccontextmanager

@@ -10,6 +10,8 @@ from fastapi import (
     status,
 )
 
+import app.domains.auth.service as auth_service
+import app.domains.villages.repository as village_repo
 from app.core.auth import (
     authenticate_user,
     get_current_active_user,
@@ -24,14 +26,11 @@ from app.core.sessions import (
     set_session_cookie,
 )
 from app.db.session import get_db
-import app.domains.auth.service as auth_service
 from app.domains.auth.schemas import (
     AuthResponse,
     LoginRequest,
     SignupRequest,
 )
-import app.domains.villages.repository as village_repo
-
 
 auth_router = r = APIRouter(
     prefix="/auth",

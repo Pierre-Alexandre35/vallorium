@@ -34,18 +34,20 @@ from enum import Enum
 from typing import Optional
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     CheckConstraint,
     DateTime,
-    Enum as SAEnum,
     ForeignKey,
     Index,
     Integer,
-    JSON,
     String,
     UniqueConstraint,
     func,
-    text
+    text,
+)
+from sqlalchemy import (
+    Enum as SAEnum,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -849,9 +851,7 @@ class VillageFarmUpgrade(Base):
             "uq_farm_upgrade_active_per_plot",
             "village_farm_plot_id",
             unique=True,
-            postgresql_where=text(
-                "status IN ('queued', 'in_progress')"
-            ),
+            postgresql_where=text("status IN ('queued', 'in_progress')"),
         ),
         Index(
             "ix_farm_upgrade_status_completes_at",

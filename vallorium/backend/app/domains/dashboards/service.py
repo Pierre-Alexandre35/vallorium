@@ -2,11 +2,10 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app.core.sessions import SessionUser
-from app.domains.dashboards.schemas import DashboardCurrentOut, DashboardVillageOut
 import app.domains.resources.service as resource_service
 import app.domains.villages.service as village_service
-
+from app.core.sessions import SessionUser
+from app.domains.dashboards.schemas import DashboardCurrentOut, DashboardVillageOut
 
 _RESOURCE_KEYS = ("wood", "clay", "iron", "crop")
 

@@ -116,9 +116,7 @@ def get_village_resource_snapshot(
         resource_name = _resource_name(resource_type_name)
         resource_key = resource_name.lower()
         rate = int(hourly_rate or 0)
-        elapsed_seconds = (
-            now_utc - _normalize_dt(last_updated)
-        ).total_seconds()
+        elapsed_seconds = (now_utc - _normalize_dt(last_updated)).total_seconds()
         gain = _compute_gain(rate, elapsed_seconds)
         capacity = _cap_for(resource_name, caps)
 

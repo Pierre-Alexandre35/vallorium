@@ -1,4 +1,3 @@
-from typing import List
 from app.common.schemas import AppBaseModel
 
 

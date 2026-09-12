@@ -1,19 +1,15 @@
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Optional
 
 from sqlalchemy.orm import Session
 
 import app.domains.buildings.repository as building_repo
-import app.domains.villages.repository as village_repo
-
 from app.domains.buildings.schemas import (
-    BuildingTypeWithLevelsOut,
     BuildingLevelOut,
-    BuildingUpgradeResourceOut,
     BuildingPrerequisiteOut,
-    BuildingLevelAvailabilityOut,
-    BuildingAvailabilityListOut,
+    BuildingTypeWithLevelsOut,
+    BuildingUpgradeResourceOut,
 )
 
 

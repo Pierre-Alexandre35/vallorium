@@ -1,6 +1,7 @@
 # app/services/tribe_service.py
-from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
+
 import app.domains.tribes.repository as tribe_repo
 
 

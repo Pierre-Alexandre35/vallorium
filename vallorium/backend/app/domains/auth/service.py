@@ -2,6 +2,10 @@ from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+import app.domains.tribes.repository as tribe_repo
+import app.domains.users.repository as user_repo
+import app.domains.villages.repository as village_repo
+import app.domains.villages.service as village_service
 from app.core.crypto import get_password_hash
 from app.core.idempotency import (
     IdempotencyKeyReuseError,
@@ -11,11 +15,6 @@ from app.core.idempotency import (
     hash_payload,
 )
 from app.domains.auth.schemas import AuthResponse, AuthUser, SignupRequest
-import app.domains.tribes.repository as tribe_repo
-import app.domains.users.repository as user_repo
-import app.domains.villages.repository as village_repo
-import app.domains.villages.service as village_service
-
 
 SIGNUP_IDEMPOTENCY_SCOPE = "auth.signup"
 STARTING_VILLAGE_NAME = "New Village"

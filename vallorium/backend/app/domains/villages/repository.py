@@ -1,10 +1,10 @@
-from csv import Error
-from typing import Sequence, Optional, List
-from sqlalchemy.orm import Session, joinedload, selectinload
-from sqlalchemy import func, and_, select
-import app.db.models as db
-from collections import defaultdict
 from datetime import datetime
+from typing import List, Optional, Sequence
+
+from sqlalchemy import and_, func, select
+from sqlalchemy.orm import Session, joinedload, selectinload
+
+import app.db.models as db
 
 
 def tile_is_occupied(db_sess: Session, map_tile_id: int) -> bool:
@@ -32,9 +32,7 @@ def get_random_starter_tile_for_update(
             db.MapTileType.id == db.MapTile.map_tile_type_id,
         )
         .options(
-            selectinload(db.MapTile.tile_type).selectinload(
-                db.MapTileType.farm_slots
-            ),
+            selectinload(db.MapTile.tile_type).selectinload(db.MapTileType.farm_slots),
         )
         .filter(
             db.MapTile.is_constructible.is_(True),
@@ -57,9 +55,7 @@ def get_tile_for_update(
     return (
         db_sess.query(db.MapTile)
         .options(
-            selectinload(db.MapTile.tile_type).selectinload(
-                db.MapTileType.farm_slots
-            ),
+            selectinload(db.MapTile.tile_type).selectinload(db.MapTileType.farm_slots),
         )
         .filter(db.MapTile.id == map_tile_id)
         .with_for_update(of=db.MapTile)
@@ -209,8 +205,7 @@ def get_owned_village_with_due_upgrade_flag(
         select(db.VillageFarmUpgrade.id)
         .join(
             db.VillageFarmPlot,
-            db.VillageFarmPlot.id
-            == db.VillageFarmUpgrade.village_farm_plot_id,
+            db.VillageFarmPlot.id == db.VillageFarmUpgrade.village_farm_plot_id,
         )
         .where(
             db.VillageFarmPlot.village_id == db.Village.id,
@@ -405,8 +400,7 @@ def has_due_farm_upgrade_for_village(
         db_sess.query(db.VillageFarmUpgrade.id)
         .join(
             db.VillageFarmPlot,
-            db.VillageFarmPlot.id
-            == db.VillageFarmUpgrade.village_farm_plot_id,
+            db.VillageFarmPlot.id == db.VillageFarmUpgrade.village_farm_plot_id,
         )
         .filter(
             db.VillageFarmPlot.village_id == village_id,
@@ -436,8 +430,7 @@ def get_village_ids_with_due_farm_upgrades(
         db_sess.query(db.VillageFarmPlot.village_id)
         .join(
             db.VillageFarmUpgrade,
-            db.VillageFarmUpgrade.village_farm_plot_id
-            == db.VillageFarmPlot.id,
+            db.VillageFarmUpgrade.village_farm_plot_id == db.VillageFarmPlot.id,
         )
         .filter(
             db.VillageFarmUpgrade.status == db.UpgradeStatus.IN_PROGRESS,
@@ -447,9 +440,7 @@ def get_village_ids_with_due_farm_upgrades(
     )
 
     if exclude_village_ids:
-        query = query.filter(
-            ~db.VillageFarmPlot.village_id.in_(exclude_village_ids)
-        )
+        query = query.filter(~db.VillageFarmPlot.village_id.in_(exclude_village_ids))
 
     rows = (
         query.group_by(db.VillageFarmPlot.village_id)
@@ -479,12 +470,9 @@ def get_due_farm_upgrades_for_village(
         db_sess.query(db.VillageFarmUpgrade)
         .join(
             db.VillageFarmPlot,
-            db.VillageFarmPlot.id
-            == db.VillageFarmUpgrade.village_farm_plot_id,
+            db.VillageFarmPlot.id == db.VillageFarmUpgrade.village_farm_plot_id,
         )
-        .options(
-            selectinload(db.VillageFarmUpgrade.farm_plot)
-        )
+        .options(selectinload(db.VillageFarmUpgrade.farm_plot))
         .filter(
             db.VillageFarmPlot.village_id == village_id,
             db.VillageFarmUpgrade.status == db.UpgradeStatus.IN_PROGRESS,
