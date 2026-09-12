@@ -90,7 +90,8 @@ const namedVillages: Array<{ x: number; y: number; occupant: TileOccupant }> = [
 ];
 
 function hashCoordinates(x: number, y: number, salt = 0): number {
-  let value = Math.imul(x + 1013 + salt, 374761393) + Math.imul(y - 947, 668265263);
+  let value =
+    Math.imul(x + 1013 + salt, 374761393) + Math.imul(y - 947, 668265263);
   value = (value ^ (value >>> 13)) >>> 0;
   value = Math.imul(value, 1274126177) >>> 0;
   return (value ^ (value >>> 16)) >>> 0;
@@ -98,8 +99,10 @@ function hashCoordinates(x: number, y: number, salt = 0): number {
 
 function getSeedIndex(x: number, y: number): number {
   const half = DEMO_WORLD_SIZE / 2;
-  const column = ((x + half) % DEMO_WORLD_SIZE + DEMO_WORLD_SIZE) % DEMO_WORLD_SIZE;
-  const row = ((y + half) % DEMO_WORLD_SIZE + DEMO_WORLD_SIZE) % DEMO_WORLD_SIZE;
+  const column =
+    (((x + half) % DEMO_WORLD_SIZE) + DEMO_WORLD_SIZE) % DEMO_WORLD_SIZE;
+  const row =
+    (((y + half) % DEMO_WORLD_SIZE) + DEMO_WORLD_SIZE) % DEMO_WORLD_SIZE;
   return row * DEMO_WORLD_SIZE + column;
 }
 
@@ -125,7 +128,9 @@ function getOccupant(x: number, y: number): TileOccupant | null {
     type: "village",
     id: 10_000 + hashCoordinates(x, y, 23),
     name: `Outpost ${Math.abs(x)}-${Math.abs(y)}`,
-    ownerName: ["Valeria", "Decimus", "Sabina", "Lucius"][hashCoordinates(x, y, 29) % 4],
+    ownerName: ["Valeria", "Decimus", "Sabina", "Lucius"][
+      hashCoordinates(x, y, 29) % 4
+    ],
     population: 35 + (hashCoordinates(x, y, 31) % 280),
   };
 }
@@ -145,7 +150,10 @@ function createTile(x: number, y: number): WorldMapTile {
   };
 }
 
-export function createDemoWorldMap(bounds: MapBounds, worldId = 1): WorldMapResponse {
+export function createDemoWorldMap(
+  bounds: MapBounds,
+  worldId = 1,
+): WorldMapResponse {
   const tiles: WorldMapTile[] = [];
 
   for (let y = bounds.minY; y <= bounds.maxY; y += 1) {

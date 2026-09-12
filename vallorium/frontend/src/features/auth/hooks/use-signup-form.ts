@@ -35,10 +35,7 @@ export function useSignupForm() {
       tribeId,
       idempotencyKey: requestIdempotencyKey,
     }: SignupRequest) =>
-      register(
-        { email, password, tribeId },
-        requestIdempotencyKey,
-      ),
+      register({ email, password, tribeId }, requestIdempotencyKey),
     onSuccess: ({ user }) => {
       cacheCurrentUser(queryClient, user);
       navigate("/app", { replace: true });

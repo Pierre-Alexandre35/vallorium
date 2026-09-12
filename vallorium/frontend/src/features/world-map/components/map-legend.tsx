@@ -14,13 +14,21 @@ const terrainItems = [
 export function MapLegend() {
   return (
     <GamePanel sx={{ p: 2 }}>
-      <Typography variant="subtitle2" fontWeight={gameTokens.typography.weight.bold}>
+      <Typography
+        variant="subtitle2"
+        fontWeight={gameTokens.typography.weight.bold}
+      >
         Map legend
       </Typography>
       <Divider sx={{ my: 1.5 }} />
       <Stack spacing={1.1}>
         {terrainItems.map((item) => (
-          <Stack key={item.label} direction="row" spacing={1} alignItems="center">
+          <Stack
+            key={item.label}
+            direction="row"
+            spacing={1}
+            alignItems="center"
+          >
             <CircleRoundedIcon sx={{ fontSize: 15, color: item.color }} />
             <Typography variant="body2" color="text.secondary">
               {item.label}

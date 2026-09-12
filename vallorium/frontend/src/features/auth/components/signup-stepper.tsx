@@ -23,10 +23,11 @@ export function SignupStepper({ step }: SignupStepperProps) {
           fontWeight: gameTokens.typography.weight.medium,
           color: "text.secondary",
         },
-        "& .MuiStepLabel-label.Mui-active, & .MuiStepLabel-label.Mui-completed": {
-          color: "primary.main",
-          fontWeight: gameTokens.typography.weight.bold,
-        },
+        "& .MuiStepLabel-label.Mui-active, & .MuiStepLabel-label.Mui-completed":
+          {
+            color: "primary.main",
+            fontWeight: gameTokens.typography.weight.bold,
+          },
         "& .MuiStepIcon-root": {
           color: gameTokens.colors.border.default,
         },
@@ -36,9 +37,10 @@ export function SignupStepper({ step }: SignupStepperProps) {
         "& .MuiStepConnector-line": {
           borderColor: gameTokens.colors.border.default,
         },
-        "& .MuiStepConnector-root.Mui-active .MuiStepConnector-line, & .MuiStepConnector-root.Mui-completed .MuiStepConnector-line": {
-          borderColor: "primary.main",
-        },
+        "& .MuiStepConnector-root.Mui-active .MuiStepConnector-line, & .MuiStepConnector-root.Mui-completed .MuiStepConnector-line":
+          {
+            borderColor: "primary.main",
+          },
       }}
     >
       {STEPS.map((label) => (

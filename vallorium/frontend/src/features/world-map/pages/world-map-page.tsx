@@ -43,8 +43,11 @@ export function WorldMapPage() {
   const query = useWorldMapData(1, MAP_BOUNDS);
   const previewData = useMemo(() => createDemoWorldMap(MAP_BOUNDS), []);
   const mapData = query.data ?? previewData;
-  const playerTile = mapData.tiles.find((tile) => tile.occupant?.isCurrentPlayer) ?? null;
-  const [selectedTile, setSelectedTile] = useState<WorldMapTile | null>(playerTile);
+  const playerTile =
+    mapData.tiles.find((tile) => tile.occupant?.isCurrentPlayer) ?? null;
+  const [selectedTile, setSelectedTile] = useState<WorldMapTile | null>(
+    playerTile,
+  );
   const [hoveredTile, setHoveredTile] = useState<WorldMapTile | null>(null);
 
   useEffect(() => {
@@ -55,7 +58,9 @@ export function WorldMapPage() {
         if (refreshed) return refreshed;
       }
 
-      return mapData.tiles.find((tile) => tile.occupant?.isCurrentPlayer) ?? null;
+      return (
+        mapData.tiles.find((tile) => tile.occupant?.isCurrentPlayer) ?? null
+      );
     });
   }, [mapData]);
 
@@ -68,7 +73,8 @@ export function WorldMapPage() {
     >
       {query.isError ? (
         <Alert severity="info" sx={{ mb: 2 }}>
-          The map API is unavailable, so this page is rendering the supplied resource-layout data as a local 100×100 preview world.
+          The map API is unavailable, so this page is rendering the supplied
+          resource-layout data as a local 100×100 preview world.
         </Alert>
       ) : null}
 
@@ -92,7 +98,8 @@ export function WorldMapPage() {
                 <Typography variant="h4">World map</Typography>
               </Stack>
               <Typography color="text.secondary" sx={{ mt: 0.35 }}>
-                Explore tiles, inspect field layouts, and find your next settlement.
+                Explore tiles, inspect field layouts, and find your next
+                settlement.
               </Typography>
             </>
           )}
@@ -100,17 +107,26 @@ export function WorldMapPage() {
 
         <Stack direction="row" spacing={0.75} alignItems="center">
           <Tooltip title="Zoom out">
-            <IconButton onClick={() => canvasRef.current?.zoomOut()} aria-label="Zoom out">
+            <IconButton
+              onClick={() => canvasRef.current?.zoomOut()}
+              aria-label="Zoom out"
+            >
               <ZoomOutRoundedIcon />
             </IconButton>
           </Tooltip>
           <Tooltip title="Zoom in">
-            <IconButton onClick={() => canvasRef.current?.zoomIn()} aria-label="Zoom in">
+            <IconButton
+              onClick={() => canvasRef.current?.zoomIn()}
+              aria-label="Zoom in"
+            >
               <ZoomInRoundedIcon />
             </IconButton>
           </Tooltip>
           <Tooltip title="Reset view">
-            <IconButton onClick={() => canvasRef.current?.resetView()} aria-label="Reset map view">
+            <IconButton
+              onClick={() => canvasRef.current?.resetView()}
+              aria-label="Reset map view"
+            >
               <CenterFocusStrongRoundedIcon />
             </IconButton>
           </Tooltip>
@@ -118,7 +134,8 @@ export function WorldMapPage() {
             variant="outlined"
             startIcon={<MyLocationRoundedIcon />}
             onClick={() => {
-              if (playerTile) canvasRef.current?.centerOn(playerTile.x, playerTile.y);
+              if (playerTile)
+                canvasRef.current?.centerOn(playerTile.x, playerTile.y);
             }}
             disabled={!playerTile}
             sx={{ display: { xs: "none", sm: "inline-flex" } }}
@@ -126,7 +143,10 @@ export function WorldMapPage() {
             My village
           </Button>
           <Tooltip title="Refresh map data">
-            <IconButton onClick={() => query.refetch()} aria-label="Refresh map data">
+            <IconButton
+              onClick={() => query.refetch()}
+              aria-label="Refresh map data"
+            >
               <RefreshRoundedIcon />
             </IconButton>
           </Tooltip>
@@ -147,7 +167,9 @@ export function WorldMapPage() {
             tiles={mapData.tiles}
             bounds={mapData.bounds}
             selectedTileId={selectedTile?.id ?? null}
-            initialCenter={playerTile ? { x: playerTile.x, y: playerTile.y } : undefined}
+            initialCenter={
+              playerTile ? { x: playerTile.x, y: playerTile.y } : undefined
+            }
             onSelectTile={setSelectedTile}
             onHoverTile={setHoveredTile}
           />
@@ -161,8 +183,12 @@ export function WorldMapPage() {
               Showing {mapData.tiles.length.toLocaleString()} tiles · World 1
             </Typography>
             {displayedTile ? (
-              <Typography variant="caption" fontWeight={gameTokens.typography.weight.bold}>
-                {displayedTile.x} | {displayedTile.y} · {displayedTile.resourceLayout}
+              <Typography
+                variant="caption"
+                fontWeight={gameTokens.typography.weight.bold}
+              >
+                {displayedTile.x} | {displayedTile.y} ·{" "}
+                {displayedTile.resourceLayout}
               </Typography>
             ) : null}
           </Stack>

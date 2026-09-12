@@ -12,7 +12,9 @@ function toVillageRow(village: DashboardVillage): VillageRow {
     name: village.name,
     population: village.population,
     coordinates:
-      village.x !== null && village.y !== null ? `${village.x}|${village.y}` : "—",
+      village.x !== null && village.y !== null
+        ? `${village.x}|${village.y}`
+        : "—",
     production: village.production,
     resources: village.resources,
     capacities: village.capacities,

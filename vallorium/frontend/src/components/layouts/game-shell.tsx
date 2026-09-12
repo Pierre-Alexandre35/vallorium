@@ -38,11 +38,27 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { label: "Village", icon: <CastleRoundedIcon fontSize="small" />, path: "/app" },
+  {
+    label: "Village",
+    icon: <CastleRoundedIcon fontSize="small" />,
+    path: "/app",
+  },
   { label: "Map", icon: <MapRoundedIcon fontSize="small" />, path: "/app/map" },
-  { label: "Reports", icon: <MenuBookRoundedIcon fontSize="small" />, path: null },
-  { label: "Alliance", icon: <ShieldRoundedIcon fontSize="small" />, path: null },
-  { label: "Statistics", icon: <AnalyticsRoundedIcon fontSize="small" />, path: null },
+  {
+    label: "Reports",
+    icon: <MenuBookRoundedIcon fontSize="small" />,
+    path: null,
+  },
+  {
+    label: "Alliance",
+    icon: <ShieldRoundedIcon fontSize="small" />,
+    path: null,
+  },
+  {
+    label: "Statistics",
+    icon: <AnalyticsRoundedIcon fontSize="small" />,
+    path: null,
+  },
 ];
 
 export function GameShell() {
@@ -74,8 +90,14 @@ export function GameShell() {
           backdropFilter: "blur(14px)",
         }}
       >
-        <Container maxWidth={false} sx={{ maxWidth: gameTokens.layout.contentMaxWidth }}>
-          <Toolbar disableGutters sx={{ minHeight: { xs: 64, md: 72 }, gap: 2 }}>
+        <Container
+          maxWidth={false}
+          sx={{ maxWidth: gameTokens.layout.contentMaxWidth }}
+        >
+          <Toolbar
+            disableGutters
+            sx={{ minHeight: { xs: 64, md: 72 }, gap: 2 }}
+          >
             <IconButton
               sx={{ display: { md: "none" } }}
               aria-label="Open navigation"
@@ -134,9 +156,22 @@ export function GameShell() {
               })}
             </Stack>
 
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: "auto" }}>
-              <Box sx={{ display: { xs: "none", sm: "block" }, textAlign: "right" }}>
-                <Typography variant="body2" fontWeight={gameTokens.typography.weight.bold}>
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              sx={{ ml: "auto" }}
+            >
+              <Box
+                sx={{
+                  display: { xs: "none", sm: "block" },
+                  textAlign: "right",
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  fontWeight={gameTokens.typography.weight.bold}
+                >
                   {currentUser.data?.email ?? "Player"}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
@@ -149,7 +184,11 @@ export function GameShell() {
                 <AccountCircleRoundedIcon />
               </Avatar>
               <Tooltip title="Sign out">
-                <IconButton onClick={() => signOut()} disabled={isSigningOut} aria-label="Sign out">
+                <IconButton
+                  onClick={() => signOut()}
+                  disabled={isSigningOut}
+                  aria-label="Sign out"
+                >
                   <LogoutRoundedIcon fontSize="small" />
                 </IconButton>
               </Tooltip>

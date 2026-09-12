@@ -92,7 +92,6 @@ export function SignupForm() {
 
         {error ? <Alert severity="error">{error}</Alert> : null}
 
-
         {step === 0 ? (
           <SignupAccountStep
             values={values}
@@ -114,11 +113,7 @@ export function SignupForm() {
           />
         )}
 
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          textAlign="center"
-        >
+        <Typography variant="body2" color="text.secondary" textAlign="center">
           Already have an account?{" "}
           <Typography
             component={RouterLink}

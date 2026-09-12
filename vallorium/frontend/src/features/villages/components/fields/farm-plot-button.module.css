@@ -27,8 +27,11 @@
   color: var(--farm-color);
   border: 1px solid rgba(255, 253, 245, 0.9);
   border-radius: 40% 46% 42% 48%;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(249, 244, 226, 0.82));
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.92),
+    rgba(249, 244, 226, 0.82)
+  );
   box-shadow:
     0 5px 11px rgba(56, 52, 38, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.96),

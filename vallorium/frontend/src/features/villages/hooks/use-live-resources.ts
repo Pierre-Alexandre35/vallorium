@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 
-import type { ResourceKey, VillageRow } from "@/features/villages/types/village";
+import type {
+  ResourceKey,
+  VillageRow,
+} from "@/features/villages/types/village";
 
 const keys: ResourceKey[] = ["wood", "clay", "iron", "crop"];
 
@@ -17,7 +20,10 @@ export function useLiveResources(village: VillageRow) {
         const next = { ...current };
         keys.forEach((key) => {
           const perSecond = (village.production[key] ?? 0) / 3600;
-          next[key] = Math.min(village.capacities[key] ?? Number.MAX_SAFE_INTEGER, (current[key] ?? 0) + perSecond);
+          next[key] = Math.min(
+            village.capacities[key] ?? Number.MAX_SAFE_INTEGER,
+            (current[key] ?? 0) + perSecond,
+          );
         });
         return next;
       });

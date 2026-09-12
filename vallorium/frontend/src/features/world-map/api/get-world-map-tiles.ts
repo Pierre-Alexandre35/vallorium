@@ -44,8 +44,11 @@ type ApiWorldMapResponse = {
   tiles: ApiTile[];
 };
 
-function normalizeOccupant(occupant: ApiOccupant | null | undefined): TileOccupant | null {
-  if (!occupant?.type || occupant.id === undefined || !occupant.name) return null;
+function normalizeOccupant(
+  occupant: ApiOccupant | null | undefined,
+): TileOccupant | null {
+  if (!occupant?.type || occupant.id === undefined || !occupant.name)
+    return null;
 
   return {
     type: occupant.type,
@@ -86,14 +89,17 @@ export async function getWorldMapTiles({
   minY,
   maxY,
 }: GetWorldMapTilesParams): Promise<WorldMapResponse> {
-  const response = await api.get<ApiWorldMapResponse>(`/worlds/${worldId}/map/tiles`, {
-    params: {
-      min_x: minX,
-      max_x: maxX,
-      min_y: minY,
-      max_y: maxY,
+  const response = await api.get<ApiWorldMapResponse>(
+    `/worlds/${worldId}/map/tiles`,
+    {
+      params: {
+        min_x: minX,
+        max_x: maxX,
+        min_y: minY,
+        max_y: maxY,
+      },
     },
-  });
+  );
 
   const fallbackBounds = { minX, maxX, minY, maxY };
 

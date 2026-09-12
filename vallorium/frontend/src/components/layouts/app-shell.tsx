@@ -20,7 +20,11 @@ export function AppShell({ title, children }: AppShellProps) {
     >
       <Container maxWidth="sm">
         <Paper elevation={0} sx={{ p: { xs: 3, md: 5 }, borderRadius: 4 }}>
-          <Typography variant="h4" fontWeight={gameTokens.typography.weight.medium} gutterBottom>
+          <Typography
+            variant="h4"
+            fontWeight={gameTokens.typography.weight.medium}
+            gutterBottom
+          >
             {title}
           </Typography>
           {children}

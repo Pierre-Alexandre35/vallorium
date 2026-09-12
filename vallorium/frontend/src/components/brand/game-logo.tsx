@@ -21,7 +21,9 @@ export function GameLogo({ compact = false, light = false }: GameLogoProps) {
           color: light ? "primary.dark" : "common.white",
           bgcolor: light ? "secondary.main" : "primary.main",
           border: "1px solid",
-          borderColor: light ? gameTokens.colors.overlay.white50 : "primary.dark",
+          borderColor: light
+            ? gameTokens.colors.overlay.white50
+            : "primary.dark",
           boxShadow: gameShadows.logo,
         }}
       >
@@ -46,7 +48,9 @@ export function GameLogo({ compact = false, light = false }: GameLogoProps) {
             variant="caption"
             sx={{
               mt: 0.4,
-              color: light ? gameTokens.colors.overlay.white68 : "text.secondary",
+              color: light
+                ? gameTokens.colors.overlay.white68
+                : "text.secondary",
               letterSpacing: gameTokens.typography.tracking.eyebrow,
               textTransform: "uppercase",
               fontWeight: gameTokens.typography.weight.bold,

@@ -1,6 +1,9 @@
 import axios from "axios";
 
-export function getRequestErrorMessage(error: unknown, fallback: string): string {
+export function getRequestErrorMessage(
+  error: unknown,
+  fallback: string,
+): string {
   if (!axios.isAxiosError(error)) {
     return fallback;
   }

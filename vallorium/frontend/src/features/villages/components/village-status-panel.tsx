@@ -27,18 +27,32 @@ export function VillageStatusPanel({ village }: { village: VillageRow }) {
   return (
     <Stack spacing={2}>
       <GamePanel sx={{ p: 2.25 }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+        >
           <Box>
             <Typography variant="h6">Production</Typography>
             <Typography variant="body2" color="text.secondary">
               Per hour
             </Typography>
           </Box>
-          <Chip label="Balanced" size="small" color="primary" variant="outlined" />
+          <Chip
+            label="Balanced"
+            size="small"
+            color="primary"
+            variant="outlined"
+          />
         </Stack>
         <Stack spacing={1.35} sx={{ mt: 2 }}>
           {resourceKeys.map((resource) => (
-            <Stack key={resource} direction="row" alignItems="center" spacing={1.2}>
+            <Stack
+              key={resource}
+              direction="row"
+              alignItems="center"
+              spacing={1.2}
+            >
               <ResourceIcon resource={resource} size={34} soft />
               <Typography variant="body2" color="text.secondary" flex={1}>
                 {resourceMeta[resource].label}
@@ -70,8 +84,15 @@ export function VillageStatusPanel({ village }: { village: VillageRow }) {
         <Typography fontWeight={gameTokens.typography.weight.heavy}>
           Iron mine · Level 7
         </Typography>
-        <Stack direction="row" alignItems="center" spacing={0.7} sx={{ mt: 0.65 }}>
-          <AccessTimeRoundedIcon sx={{ fontSize: 17, color: "text.secondary" }} />
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={0.7}
+          sx={{ mt: 0.65 }}
+        >
+          <AccessTimeRoundedIcon
+            sx={{ fontSize: 17, color: "text.secondary" }}
+          />
           <Typography variant="body2" color="text.secondary">
             Finishes in 04:13
           </Typography>
@@ -101,9 +122,18 @@ export function VillageStatusPanel({ village }: { village: VillageRow }) {
       </GamePanel>
 
       <GamePanel sx={{ p: 2.25 }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+        >
           <Typography variant="h6">Troop movements</Typography>
-          <Chip label="2 active" size="small" color="error" variant="outlined" />
+          <Chip
+            label="2 active"
+            size="small"
+            color="error"
+            variant="outlined"
+          />
         </Stack>
         <Stack spacing={1.5} sx={{ mt: 1.75 }}>
           <Stack direction="row" spacing={1.2} alignItems="center">

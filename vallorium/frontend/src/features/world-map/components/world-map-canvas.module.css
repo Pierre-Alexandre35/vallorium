@@ -6,7 +6,11 @@
   overflow: hidden;
   border-radius: 16px;
   background:
-    radial-gradient(circle at 50% 15%, rgba(255, 255, 255, 0.42), transparent 38%),
+    radial-gradient(
+      circle at 50% 15%,
+      rgba(255, 255, 255, 0.42),
+      transparent 38%
+    ),
     #dce8b4;
   cursor: grab;
   user-select: none;

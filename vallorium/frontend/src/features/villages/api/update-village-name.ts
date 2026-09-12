@@ -8,10 +8,7 @@ export async function updateVillageName(
   villageId: number,
   values: VillageNameUpdate,
 ): Promise<Village> {
-  const { data } = await api.patch<Village>(
-    `/villages/${villageId}`,
-    values,
-  );
+  const { data } = await api.patch<Village>(`/villages/${villageId}`, values);
 
   return data;
 }
