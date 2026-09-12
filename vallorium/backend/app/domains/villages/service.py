@@ -33,7 +33,9 @@ def initialize_village(
     if len(farm_slots) != 18:
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Map tile type {tile.map_tile_type_id} does not define 18 farm slots.",
+            detail=(
+                f"Map tile type {tile.map_tile_type_id} does not define 18 farm slots."
+            ),
         )
 
     v = village_repo.insert_village(
