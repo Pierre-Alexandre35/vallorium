@@ -1,19 +1,22 @@
 name: Deploy Frontend to Firebase Hosting
 
 on:
-  push:
-    branches:
-      - main
-
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      release_version:
+        required: true
+        type: string
+      commit_sha:
+        required: true
+        type: string
 
 permissions:
   contents: read
   id-token: write
 
 concurrency:
-  group: deploy-frontend-${{ github.ref }}
-  cancel-in-progress: true
+  group: deploy-frontend-production
+  cancel-in-progress: false
 
 env:
   PROJECT_ID: travian-prod-1234
@@ -26,6 +29,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.commit_sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -40,6 +45,9 @@ jobs:
 
       - name: Build frontend
         working-directory: ${{ env.FRONTEND_DIR }}
+        env:
+          VITE_APP_VERSION: ${{ inputs.release_version }}
+          VITE_COMMIT_SHA: ${{ inputs.commit_sha }}
         run: npm run build
 
       - name: Authenticate to Google Cloud

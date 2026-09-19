@@ -1,30 +1,22 @@
 name: Deploy Backend to Cloud Run
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "vallorium/backend/**"
-      - "iac/main.tf"
-      - "iac/variables.tf"
-      - "iac/backend.tf"
-      - "iac/redis.tf"
-      - "iac/outputs.tf"
-      - "iac/modules/cloud_run/**"
-      - "iac/envs/prod.tfvars"
-      - "iac/envs/prod.backend.hcl"
-      - ".github/workflows/deploy-backend.yml"
-
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      release_version:
+        required: true
+        type: string
+      commit_sha:
+        required: true
+        type: string
 
 permissions:
   contents: read
   id-token: write
 
 concurrency:
-  group: deploy-backend-${{ github.ref }}
-  cancel-in-progress: true
+  group: deploy-backend-production
+  cancel-in-progress: false
 
 env:
   PROJECT_ID: travian-prod-1234
@@ -41,6 +33,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.commit_sha }}
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
@@ -64,13 +58,15 @@ jobs:
         run: |
           docker build \
             --platform linux/amd64 \
-            -t "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY_ID}/${IMAGE_NAME}:${GITHUB_SHA}" \
+            --build-arg APP_VERSION="${{ inputs.release_version }}" \
+            --build-arg COMMIT_SHA="${{ inputs.commit_sha }}" \
+            -t "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY_ID}/${IMAGE_NAME}:${{ inputs.commit_sha }}" \
             "${BACKEND_DIR}"
 
       - name: Push backend image
         run: |
           docker push \
-            "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY_ID}/${IMAGE_NAME}:${GITHUB_SHA}"
+            "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY_ID}/${IMAGE_NAME}:${{ inputs.commit_sha }}"
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
@@ -93,7 +89,7 @@ jobs:
             -input=false \
             -out=tfplan \
             -var-file=envs/prod.tfvars \
-            -var="image_tag=${GITHUB_SHA}"
+            -var="image_tag=${{ inputs.commit_sha }}"
 
       - name: Terraform apply
         working-directory: ${{ env.IAC_DIR }}
@@ -102,3 +98,4 @@ jobs:
             -input=false \
             -auto-approve \
             tfplan
+            
