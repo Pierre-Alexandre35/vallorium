@@ -17,5 +17,6 @@ DB_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "5"))
 DB_MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "5"))
 DB_POOL_TIMEOUT_SECONDS = int(os.getenv("DB_POOL_TIMEOUT_SECONDS", "10"))
 DB_POOL_RECYCLE_SECONDS = int(os.getenv("DB_POOL_RECYCLE_SECONDS", "300"))
+APP_VERSION = os.getenv("APP_VERSION", "dev")
 
 LOG_REQUEST_TIMINGS = os.getenv("LOG_REQUEST_TIMINGS", "false").lower() == "true"

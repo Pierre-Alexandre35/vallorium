@@ -1,6 +1,7 @@
 import CastleRoundedIcon from "@mui/icons-material/CastleRounded";
 import { Box, Stack, Typography } from "@mui/material";
 
+import { buildInfo } from "@/app/build-info";
 import { gameShadows, gameTokens } from "@/theme";
 
 interface GameLogoProps {
@@ -29,6 +30,7 @@ export function GameLogo({ compact = false, light = false }: GameLogoProps) {
       >
         <CastleRoundedIcon fontSize={compact ? "small" : "medium"} />
       </Box>
+
       <Box>
         <Typography
           component="div"
@@ -42,7 +44,23 @@ export function GameLogo({ compact = false, light = false }: GameLogoProps) {
         >
           Verdant Realms
         </Typography>
-        {!compact ? (
+
+        {compact ? (
+          <Typography
+            component="div"
+            sx={{
+              mt: 0.25,
+              fontSize: 9,
+              lineHeight: 1,
+              fontWeight: gameTokens.typography.weight.bold,
+              color: light
+                ? gameTokens.colors.overlay.white68
+                : "text.secondary",
+            }}
+          >
+            {buildInfo.version}
+          </Typography>
+        ) : (
           <Typography
             component="div"
             variant="caption"
@@ -58,7 +76,7 @@ export function GameLogo({ compact = false, light = false }: GameLogoProps) {
           >
             Strategy begins here
           </Typography>
-        ) : null}
+        )}
       </Box>
     </Stack>
   );

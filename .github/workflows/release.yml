@@ -1,0 +1,126 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. v0.9.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: production-release
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: Run CI
+    uses: ./.github/workflows/integration.yml
+
+  create-tag:
+    name: Create release tag
+    needs: ci
+    runs-on: ubuntu-latest
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Ensure release is from main
+        run: |
+          if [[ "${GITHUB_REF}" != "refs/heads/main" ]]; then
+            echo "::error::Releases must be created from main."
+            exit 1
+          fi
+
+      - name: Validate version
+        id: version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version must look like v0.9.0"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Create tag
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          git fetch origin --tags
+
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            EXISTING_SHA="$(git rev-list -n 1 "$VERSION")"
+
+            if [[ "$EXISTING_SHA" != "$GITHUB_SHA" ]]; then
+              echo "::error::Tag $VERSION already exists on another commit."
+              exit 1
+            fi
+
+            echo "Tag $VERSION already exists on this commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git tag \
+            -a "$VERSION" \
+            "$GITHUB_SHA" \
+            -m "$VERSION"
+
+          git push origin "$VERSION"
+
+  deploy-frontend:
+    name: Deploy frontend
+    needs: create-tag
+    uses: ./.github/workflows/deploy-front.yml
+    with:
+      release_version: ${{ needs.create-tag.outputs.version }}
+      commit_sha: ${{ github.sha }}
+
+  deploy-backend:
+    name: Deploy backend
+    needs: create-tag
+    uses: ./.github/workflows/deploy-backend.yml
+    with:
+      release_version: ${{ needs.create-tag.outputs.version }}
+      commit_sha: ${{ github.sha }}
+
+  publish-release:
+    name: Publish GitHub release
+    needs:
+      - create-tag
+      - deploy-frontend
+      - deploy-backend
+
+    runs-on: ubuntu-latest
+
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      VERSION: ${{ needs.create-tag.outputs.version }}
+
+    steps:
+      - name: Create GitHub release
+        run: |
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Release $VERSION already exists."
+            exit 0
+          fi
+
+          gh release create "$VERSION" \
+            --generate-notes \
+            --title "$VERSION" \
+            --verify-tag
