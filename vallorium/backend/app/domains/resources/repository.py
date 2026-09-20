@@ -44,7 +44,7 @@ def load_resource_state_with_production(
     db_sess: Session,
     *,
     village_id: int,
-) -> list[tuple[int, object, int, object, int]]:
+) -> list[tuple[int, object, int, object, int, int]]:
     """Load one village's resource balances and hourly production in one query.
 
     This is the hot read path for the current-village dashboard. Production is
@@ -78,6 +78,7 @@ def load_resource_state_with_production(
             db.ResourcesTypes.name,
             db.VillageResourceStorage.stored_amount,
             db.VillageResourceStorage.last_updated,
+            db.VillageResourceStorage.production_remainder,
             func.coalesce(production.c.hourly_production, 0),
         )
         .join(

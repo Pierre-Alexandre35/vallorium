@@ -593,3 +593,21 @@ def get_owned_farm_plots(
         .order_by(db.VillageFarmPlot.farm_number)
         .all()
     )
+
+
+def get_farm_upgrade_backlog(
+    db_sess: Session, *, now: datetime
+) -> tuple[int, datetime | None]:
+    """Count overdue events and report the oldest scheduled completion."""
+    count, oldest = (
+        db_sess.query(
+            func.count(db.VillageFarmUpgrade.id),
+            func.min(db.VillageFarmUpgrade.completes_at),
+        )
+        .filter(
+            db.VillageFarmUpgrade.status == db.UpgradeStatus.IN_PROGRESS,
+            db.VillageFarmUpgrade.completes_at <= now,
+        )
+        .one()
+    )
+    return int(count), oldest

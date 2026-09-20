@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 import app.domains.buildings.repository as building_repo
 import app.domains.resources.repository as resource_repo
 import app.domains.villages.repository as village_repo
+from app.domains.resources.calculator import accrue
 
 
 class InsufficientResourcesError(Exception):
@@ -69,11 +70,6 @@ def _to_rate_map(
     return rate_by_res_id
 
 
-def _compute_gain(hourly_rate: int, elapsed_seconds: float) -> int:
-    safe_elapsed = max(int(elapsed_seconds), 0)
-    return (hourly_rate * safe_elapsed) // 3600
-
-
 def get_village_resource_snapshot(
     db_sess: Session,
     *,
@@ -111,17 +107,19 @@ def get_village_resource_snapshot(
         resource_type_name,
         stored_amount,
         last_updated,
+        remainder,
         hourly_rate,
     ) in rows:
         resource_name = _resource_name(resource_type_name)
         resource_key = resource_name.lower()
         rate = int(hourly_rate or 0)
-        elapsed_seconds = (now_utc - _normalize_dt(last_updated)).total_seconds()
-        gain = _compute_gain(rate, elapsed_seconds)
         capacity = _cap_for(resource_name, caps)
 
         production[resource_key] = rate
-        balances[resource_key] = min(int(stored_amount) + gain, capacity)
+        start = _normalize_dt(last_updated)
+        balances[resource_key], _ = accrue(
+            int(stored_amount), remainder, rate, capacity, start, max(start, now_utc)
+        )
 
     return production, balances, caps
 
@@ -180,8 +178,6 @@ def settle_and_lock_village_resources(
     for storage in storages:
         last_updated_utc = _normalize_dt(storage.last_updated)
 
-        elapsed_seconds = (now_utc - last_updated_utc).total_seconds()
-
         resource_name = _resource_name(storage.resource_type.name)
 
         capacity = _cap_for(
@@ -194,14 +190,13 @@ def settle_and_lock_village_resources(
             0,
         )
 
-        gain = _compute_gain(
-            hourly_rate=hourly_rate,
-            elapsed_seconds=elapsed_seconds,
-        )
-
-        storage.stored_amount = min(
-            storage.stored_amount + gain,
+        storage.stored_amount, storage.production_remainder = accrue(
+            storage.stored_amount,
+            storage.production_remainder,
+            hourly_rate,
             capacity,
+            last_updated_utc,
+            now_utc,
         )
 
         storage.last_updated = now_utc
@@ -243,14 +238,18 @@ def get_computed_balance_maps_by_village_ids(
 
         for storage in storages:
             last_updated_utc = _normalize_dt(storage.last_updated)
-            elapsed_seconds = (now_utc - last_updated_utc).total_seconds()
 
             resource_name = _resource_name(storage.resource_type.name)
             cap = _cap_for(resource_name, caps)
             hourly_rate = rate_by_res_id.get(storage.resource_type_id, 0)
-            gain = _compute_gain(hourly_rate, elapsed_seconds)
-
-            computed_amount = min(storage.stored_amount + gain, cap)
+            computed_amount, _ = accrue(
+                storage.stored_amount,
+                storage.production_remainder,
+                hourly_rate,
+                cap,
+                last_updated_utc,
+                max(last_updated_utc, now_utc),
+            )
             village_balances[resource_name.lower()] = computed_amount
 
         results[village_id] = village_balances

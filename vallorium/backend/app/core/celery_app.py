@@ -13,6 +13,10 @@ celery_app = Celery(
     include=["app.tasks"],
 )
 
+sweep_interval = float(os.getenv("FARM_UPGRADE_SWEEP_SECONDS", "2"))
+if not 0 < sweep_interval <= 60:
+    raise ValueError("FARM_UPGRADE_SWEEP_SECONDS must be between 0 and 60")
+
 celery_app.conf.update(
     timezone="UTC",
     enable_utc=True,
@@ -22,7 +26,7 @@ celery_app.conf.update(
     beat_schedule={
         "complete-due-farm-upgrades": {
             "task": "app.tasks.complete_due_farm_upgrades",
-            "schedule": 2.0,
+            "schedule": sweep_interval,
             # If the worker is temporarily backed up, stale sweep messages are
             # not useful: a newer sweep will cover the same DB-backed work.
             "options": {

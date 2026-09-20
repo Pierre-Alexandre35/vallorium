@@ -3,6 +3,8 @@ export type ResourceKey = "wood" | "clay" | "iron" | "crop";
 export type ResourceMap = Record<ResourceKey, number>;
 
 export type DashboardVillage = {
+  snapshot_at: string;
+  receivedAt: number;
   id: number;
   name: string;
   population: number;
@@ -19,6 +21,8 @@ export type DashboardCurrent = {
 };
 
 export type VillageRow = {
+  snapshot_at: string;
+  receivedAt: number;
   id: number;
   name: string;
   population: number;

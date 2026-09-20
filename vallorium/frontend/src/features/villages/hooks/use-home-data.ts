@@ -8,6 +8,8 @@ import type {
 
 function toVillageRow(village: DashboardVillage): VillageRow {
   return {
+    snapshot_at: village.snapshot_at,
+    receivedAt: village.receivedAt,
     id: village.id,
     name: village.name,
     population: village.population,
@@ -26,6 +28,8 @@ export function useHomeData(currentVillageId: number | null | undefined) {
     queryKey: ["dashboard", "current", currentVillageId],
     queryFn: ({ signal }) => getCurrentDashboard(signal),
     enabled: currentVillageId != null,
+    refetchOnWindowFocus: "always",
+    refetchOnReconnect: "always",
     select: (dashboard) => ({
       village: dashboard.village ? toVillageRow(dashboard.village) : null,
     }),
