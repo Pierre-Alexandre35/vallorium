@@ -332,21 +332,22 @@ def complete_due_farm_upgrades(
     *,
     now: datetime | None = None,
     batch_size: int = 100,
+    max_batches: int = 10,
 ) -> int:
-    """Materialize all currently overdue farm upgrades in bounded batches.
+    """Materialize a bounded number of villages with overdue farm upgrades.
 
     The discovery query is global across all users but only returns villages
     that actually have due work. Each village is committed independently, so
     locks stay short and memory use remains bounded even with many villages.
     """
-    if batch_size <= 0:
-        raise ValueError("batch_size must be greater than zero")
+    if batch_size <= 0 or max_batches <= 0:
+        raise ValueError("batch_size and max_batches must be greater than zero")
 
     effective_now = now or datetime.now(timezone.utc)
     total_completed = 0
     skipped_village_ids: set[int] = set()
 
-    while True:
+    for _ in range(max_batches):
         village_ids = village_repo.get_village_ids_with_due_farm_upgrades(
             db_sess=db,
             now=effective_now,

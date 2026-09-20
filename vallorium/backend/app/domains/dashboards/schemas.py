@@ -1,9 +1,11 @@
+from datetime import datetime
 from typing import Dict
 
 from app.common.schemas import AppBaseModel
 
 
 class DashboardVillageOut(AppBaseModel):
+    snapshot_at: datetime
     id: int
     name: str
     population: int

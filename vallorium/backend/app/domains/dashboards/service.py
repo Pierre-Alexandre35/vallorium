@@ -50,6 +50,7 @@ def get_current_dashboard(
 
     return DashboardCurrentOut(
         village=DashboardVillageOut(
+            snapshot_at=now,
             id=village.id,
             name=village.name,
             population=village.population,

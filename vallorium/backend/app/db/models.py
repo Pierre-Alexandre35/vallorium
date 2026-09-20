@@ -35,6 +35,7 @@ from typing import Optional
 
 from sqlalchemy import (
     JSON,
+    BigInteger,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -748,6 +749,13 @@ class VillageResourceStorage(Base):
         nullable=False,
         default=0,
     )
+    production_remainder: Mapped[int] = mapped_column(
+        BigInteger,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
+
     last_updated: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -766,6 +774,10 @@ class VillageResourceStorage(Base):
         CheckConstraint(
             "stored_amount >= 0",
             name="ck_village_resource_non_negative",
+        ),
+        CheckConstraint(
+            "production_remainder >= 0 AND production_remainder < 3600000000",
+            name="ck_village_resource_remainder",
         ),
     )
 
