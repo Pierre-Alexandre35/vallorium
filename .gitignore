@@ -116,3 +116,4 @@ node_modules/
 perso.txt
 .DS_Store
 *.DS_Store
+*.vscode/
