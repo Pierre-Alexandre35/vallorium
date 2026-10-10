@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  PROJECT_ID: travian-prod-1234
+  PROJECT_ID: vallorium-online-prod-01
   FRONTEND_DIR: vallorium/frontend
 
 jobs:
