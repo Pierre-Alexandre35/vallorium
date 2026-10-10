@@ -1,3 +1,3 @@
-project           = "travian-prod-1234"
+project           = "vallorium-online-prod-01"
 region            = "europe-west9"
 github_repository = "Pierre-Alexandre35/vallorium"

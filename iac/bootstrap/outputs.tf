@@ -18,6 +18,10 @@ output "backend_runtime_service_account" {
   value       = google_service_account.backend_runtime.email
 }
 
+output "postgres_runtime_service_account_email" {
+  value = google_service_account.postgres_runtime.email
+}
+
 output "backend_artifact_repository" {
   description = "Artifact Registry repository used by backend CI"
   value       = google_artifact_registry_repository.backend.repository_id

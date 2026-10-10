@@ -101,3 +101,42 @@ variable "redis_memory_size_gb" {
     error_message = "redis_memory_size_gb must be at least 1 GiB."
   }
 }
+
+variable "postgres_name" {
+  description = "Compute Engine PostgreSQL VM name"
+  type        = string
+  default     = "vallorium-postgres"
+}
+
+variable "postgres_zone" {
+  description = "Zone for PostgreSQL VM"
+  type        = string
+  default     = "europe-west9-b"
+}
+
+variable "postgres_machine_type" {
+  description = "Compute Engine machine type for PostgreSQL"
+  type        = string
+  default     = "e2-standard-2"
+}
+
+variable "postgres_data_disk_size_gb" {
+  description = "PostgreSQL persistent SSD size"
+  type        = number
+  default     = 50
+}
+
+variable "postgres_database_name" {
+  type    = string
+  default = "vallorium"
+}
+
+variable "postgres_database_user" {
+  type    = string
+  default = "vallorium"
+}
+
+variable "postgres_runtime_service_account_email" {
+  description = "Service account attached to the PostgreSQL VM"
+  type        = string
+}

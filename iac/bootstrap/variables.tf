@@ -17,7 +17,7 @@ variable "github_repository" {
 variable "terraform_state_bucket" {
   description = "Existing GCS bucket used only for Terraform remote state"
   type        = string
-  default     = "travian-prod-1234-tfstate"
+  default     = "vallorium-online-prod-01-state"
 }
 
 variable "backend_repository_id" {
@@ -30,6 +30,12 @@ variable "backend_runtime_service_account_id" {
   description = "Service account ID used by Cloud Run at runtime"
   type        = string
   default     = "vallorium-backend-runtime"
+}
+
+variable "postgres_runtime_service_account_id" {
+  description = "Service account ID used by the PostgreSQL VM at runtime"
+  type        = string
+  default     = "vallorium-postgres-runtime"
 }
 
 variable "database_url_secret_id" {

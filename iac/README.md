@@ -6,7 +6,7 @@ Terraform is split by responsibility:
 - `frontend/`: Firebase project enablement and Firebase Hosting site.
 - root stack + `modules/cloud_run/`: backend VPC, Memorystore Redis, and Cloud Run service revision from an already-built Artifact Registry image.
 
-The Terraform state bucket `travian-prod-1234-tfstate` is a prerequisite and is intentionally not managed by the stacks that store state inside it.
+The Terraform state bucket `vallorium-online-prod-01-tfstate` is a prerequisite and is intentionally not managed by the stacks that store state inside it.
 
 ## 1. Apply the updated bootstrap stack
 
@@ -48,7 +48,7 @@ Add at least one enabled version before the first Cloud Run deployment:
 ```bash
 printf '%s' "$DATABASE_URL" | \
   gcloud secrets versions add vallorium-database-url --data-file=- \
-  --project=travian-prod-1234
+  --project=vallorium-online-prod-01
 ```
 
 Do not commit the database URL to `prod.tfvars`.
@@ -102,7 +102,7 @@ The first root-stack deployment can take several minutes because Memorystore mus
 The root backend stack uses:
 
 ```hcl
-bucket = "travian-prod-1234-tfstate"
+bucket = "vallorium-online-prod-01-state"
 prefix = "tfstate/backend"
 ```
 
