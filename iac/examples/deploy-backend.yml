@@ -26,7 +26,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PROJECT_ID: travian-prod-1234
+  PROJECT_ID: vallorium-online-prod-01
   REGION: europe-west9
   REPOSITORY_ID: api
   IMAGE_NAME: backend

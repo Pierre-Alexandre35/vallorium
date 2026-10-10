@@ -1,6 +1,8 @@
 locals {
   backend_deployer_member = "serviceAccount:${google_service_account.backend_deployer.email}"
   backend_runtime_member  = "serviceAccount:${google_service_account.backend_runtime.email}"
+  postgres_runtime_member = "serviceAccount:${google_service_account.postgres_runtime.email}"
+
 
   # Only actual credentials belong in Secret Manager. Memorystore uses a private
   # VPC endpoint, so REDIS_URL is assembled by the backend Terraform stack.
@@ -25,6 +27,18 @@ resource "google_service_account" "backend_runtime" {
   depends_on = [module.apis]
 }
 
+resource "google_service_account" "postgres_runtime" {
+  project      = var.project
+  account_id   = var.postgres_runtime_service_account_id
+  display_name = "Vallorium PostgreSQL runtime"
+}
+
+resource "google_service_account_iam_member" "backend_deployer_can_use_postgres_runtime" {
+  service_account_id = google_service_account.postgres_runtime.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = local.backend_deployer_member
+}
+
 resource "google_service_account_iam_member" "github_can_impersonate_backend_deployer" {
   service_account_id = google_service_account.backend_deployer.name
   role               = "roles/iam.workloadIdentityUser"
@@ -35,6 +49,12 @@ resource "google_service_account_iam_member" "github_can_impersonate_backend_dep
 resource "google_project_iam_member" "backend_deployer_cloud_run_admin" {
   project = var.project
   role    = "roles/run.admin"
+  member  = local.backend_deployer_member
+}
+
+resource "google_project_iam_member" "backend_deployer_compute_instance_admin" {
+  project = var.project
+  role    = "roles/compute.instanceAdmin.v1"
   member  = local.backend_deployer_member
 }
 

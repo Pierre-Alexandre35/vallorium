@@ -1,3 +1,3 @@
-project = "travian-prod-1234"
+project = "vallorium-online-prod-01"
 region  = "europe-west9"
-site_id = "travian-prod-1234"
+site_id = "vallorium-online-prod-01"
