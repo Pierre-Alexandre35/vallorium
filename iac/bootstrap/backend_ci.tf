@@ -132,3 +132,9 @@ resource "google_secret_manager_secret_iam_member" "backend_runtime_accessor" {
   role      = "roles/secretmanager.secretAccessor"
   member    = local.backend_runtime_member
 }
+
+resource "google_project_iam_member" "backend_deployer_security_admin" {
+  project = var.project
+  role    = "roles/compute.securityAdmin"
+  member  = local.backend_deployer_member
+}

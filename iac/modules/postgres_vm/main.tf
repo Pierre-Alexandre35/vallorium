@@ -75,3 +75,22 @@ resource "google_compute_firewall" "postgres" {
 
   target_tags = ["postgres"]
 }
+
+resource "google_compute_firewall" "postgres_iap_ssh" {
+  project = var.project
+  name    = "${var.name}-allow-iap-ssh"
+  network = var.network
+
+  direction = "INGRESS"
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
+  }
+
+  source_ranges = [
+    "35.235.240.0/20"
+  ]
+
+  target_tags = ["postgres"]
+}
