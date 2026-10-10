@@ -6,12 +6,21 @@ terraform {
       source  = "hashicorp/google"
       version = "~> 5.40"
     }
+
+    github = {
+      source  = "integrations/github"
+      version = "~> 6.0"
+    }
   }
 }
 
 provider "google" {
   project = var.project
   region  = var.region
+}
+
+provider "github" {
+  owner = "Pierre-Alexandre35"
 }
 
 module "apis" {
