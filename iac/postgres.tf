@@ -13,7 +13,7 @@ module "postgres" {
 
   data_disk_size_gb = var.postgres_data_disk_size_gb
 
-  database_name = var.postgres_database_name
-  database_user = var.postgres_database_user
+  database_name         = var.postgres_database_name
+  database_user         = var.postgres_database_user
   service_account_email = var.postgres_runtime_service_account_email
 }
