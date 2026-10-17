@@ -138,10 +138,36 @@ The frontend can then use relative API calls such as:
 
 instead of embedding the generated `*.run.app` URL in the Vite build.
 
+## Custom domain: vallorium.online
+
+The frontend stack manages the domain association using `custom_domains` in
+`envs/prod.frontend.tfvars`. DNS records remain with your authoritative DNS provider.
+
+From the repository root:
+
+```bash
+terraform -chdir=iac/frontend init -reconfigure
+terraform -chdir=iac/frontend plan -var-file=../envs/prod.frontend.tfvars
+terraform -chdir=iac/frontend apply -var-file=../envs/prod.frontend.tfvars
+terraform -chdir=iac/frontend output -json hosting_custom_domains
+```
+
+Apply the DNS changes returned under `required_dns_updates` at your DNS provider,
+respecting each record's `required_action`. Firebase Hosting's custom domain panel
+also displays the required records and verification progress. Keep the ownership
+TXT record after verification, and preserve unrelated records such as email MX records.
+
+Terraform does not wait for DNS verification, so a successful apply means the domain
+association was created, not that HTTPS is ready. Firebase provisions the certificate
+after verification; this can take up to 24 hours after DNS points to Hosting.
+No `firebase.json` or application deployment changes are required for the domain.
+This configuration connects only `vallorium.online`, not `www.vallorium.online`.
+
 ## 8. Recommended deployment order
 
 ```text
 bootstrap plan/apply
+  -> frontend Terraform plan/apply (Hosting site and custom domain)
   -> confirm DATABASE_URL Secret Manager version exists
   -> update backend code to read REDIS_URL
   -> commit deploy-backend.yml + Terraform changes
