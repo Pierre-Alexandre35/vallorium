@@ -29,3 +29,16 @@ resource "google_firebase_hosting_site" "frontend" {
 
   depends_on = [google_firebase_project.frontend]
 }
+
+# DNS is configured separately at the domain's authoritative DNS provider.
+resource "google_firebase_hosting_custom_domain" "frontend" {
+  provider = google-beta
+  for_each = var.custom_domains
+
+  project       = var.project
+  site_id       = google_firebase_hosting_site.frontend.site_id
+  custom_domain = each.value
+
+  # Return the required DNS records without blocking on manual verification.
+  wait_dns_verification = false
+}
