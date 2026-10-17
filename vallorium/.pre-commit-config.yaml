@@ -30,3 +30,12 @@ repos:
         language: system
         files: ^vallorium/frontend/
         pass_filenames: false
+
+  - repo: local
+    hooks:
+      - id: terraform-fmt
+        name: Terraform formatting and syntax
+        entry: terraform fmt -check
+        language: system
+        files: ^iac/.*\.(tf|tfvars)$
+        pass_filenames: true
