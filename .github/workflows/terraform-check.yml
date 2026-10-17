@@ -1,0 +1,39 @@
+
+name: Terraform checks
+
+on:
+  pull_request:
+    paths:
+      - "iac/**"
+      - ".github/workflows/terraform-check.yml"
+  push:
+    branches: [dev, main]
+    paths:
+      - "iac/**"
+      - ".github/workflows/terraform-check.yml"
+
+jobs:
+  terraform-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Check Terraform formatting and syntax
+        run: terraform fmt -check -recursive iac
+
+      - name: Validate backend infrastructure
+        working-directory: iac
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate -no-color
+
+      - name: Validate frontend infrastructure
+        working-directory: iac/frontend
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate -no-color
