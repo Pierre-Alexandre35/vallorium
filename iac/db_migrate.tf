@@ -4,8 +4,6 @@ resource "google_cloud_run_v2_job" "db_migrate" {
   name     = "vallorium-db-migrate"
   location = var.region
 
-  deletion_protection = true
-
   template {
     task_count  = 1
     parallelism = 1
@@ -30,9 +28,11 @@ resource "google_cloud_run_v2_job" "db_migrate" {
       containers {
         image = "${var.region}-docker.pkg.dev/${var.project}/${var.repository_id}/${var.image_name}:${var.image_tag}"
 
+        # Run database schema migrations.
         command = ["alembic"]
         args    = ["upgrade", "head"]
 
+        # Database credentials from Secret Manager.
         env {
           name = "DATABASE_URL"
 
@@ -53,10 +53,10 @@ resource "google_cloud_run_v2_job" "db_migrate" {
   }
 
   lifecycle {
+    # Prevent accidental destruction through Terraform.
     prevent_destroy = true
 
-    # GitHub Actions updates the migration image
-    # to match the release being deployed.
+    # GitHub Actions manages the migration job image.
     ignore_changes = [
       template[0].template[0].containers[0].image
     ]
