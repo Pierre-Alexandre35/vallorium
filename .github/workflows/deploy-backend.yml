@@ -1,3 +1,4 @@
+
 name: Deploy Backend to Cloud Run
 
 on:
@@ -14,6 +15,7 @@ permissions:
   contents: read
   id-token: write
 
+# Never cancel a production migration partway through.
 concurrency:
   group: deploy-backend-production
   cancel-in-progress: false
@@ -25,6 +27,7 @@ env:
   IMAGE_NAME: backend
   BACKEND_DIR: vallorium/backend
   IAC_DIR: iac
+  MIGRATION_JOB: vallorium-db-migrate
 
 jobs:
   build-and-deploy:
@@ -47,6 +50,16 @@ jobs:
         uses: google-github-actions/setup-gcloud@v3
         with:
           project_id: ${{ env.PROJECT_ID }}
+
+      - name: Check migration job exists
+        run: |
+          if ! gcloud run jobs describe "${MIGRATION_JOB}" \
+            --project="${PROJECT_ID}" \
+            --region="${REGION}" \
+            --format='value(metadata.name)'; then
+            echo "Migration job ${MIGRATION_JOB} is missing or inaccessible. Provision it before deploying." >&2
+            exit 1
+          fi
 
       - name: Configure Docker for Artifact Registry
         run: |
@@ -80,7 +93,7 @@ jobs:
 
       - name: Terraform validate
         working-directory: ${{ env.IAC_DIR }}
-        run: terraform validate
+        run: terraform validate -no-color
 
       - name: Terraform plan
         working-directory: ${{ env.IAC_DIR }}
@@ -91,11 +104,44 @@ jobs:
             -var-file=envs/prod.tfvars \
             -var="image_tag=${{ inputs.commit_sha }}"
 
+      - name: Block destructive Terraform changes
+        working-directory: ${{ env.IAC_DIR }}
+        run: |
+          terraform show -json tfplan | jq -e '
+            [.resource_changes[]?
+             | select(.change.actions | index("delete"))]
+            | length == 0
+          '
+
+      - name: Update migration job image
+        run: |
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY_ID}/${IMAGE_NAME}:${{ inputs.commit_sha }}"
+
+          gcloud run jobs update "${MIGRATION_JOB}" \
+            --project="${PROJECT_ID}" \
+            --region="${REGION}" \
+            --image="${IMAGE}"
+
+      - name: Run Alembic migrations
+        run: |
+          gcloud run jobs execute "${MIGRATION_JOB}" \
+            --project="${PROJECT_ID}" \
+            --region="${REGION}" \
+            --wait
+
       - name: Terraform apply
         working-directory: ${{ env.IAC_DIR }}
         run: |
           terraform apply \
             -input=false \
-            -auto-approve \
             tfplan
-            
+
+      - name: Verify database-backed API endpoint
+        run: |
+          curl --fail --silent --show-error \
+            --retry 5 \
+            --retry-delay 3 \
+            --retry-all-errors \
+            --max-time 20 \
+            "https://vallorium.online/api/v1/tribes" \
+            | jq -e 'type == "array"' > /dev/null
