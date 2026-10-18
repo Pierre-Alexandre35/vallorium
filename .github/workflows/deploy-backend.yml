@@ -15,7 +15,6 @@ permissions:
   contents: read
   id-token: write
 
-# Never cancel a production migration partway through.
 concurrency:
   group: deploy-backend-production
   cancel-in-progress: false
@@ -28,6 +27,7 @@ env:
   BACKEND_DIR: vallorium/backend
   IAC_DIR: iac
   MIGRATION_JOB: vallorium-db-migrate
+  SEED_JOB: vallorium-db-seed-reference
 
 jobs:
   build-and-deploy:
@@ -51,15 +51,17 @@ jobs:
         with:
           project_id: ${{ env.PROJECT_ID }}
 
-      - name: Check migration job exists
+      - name: Check database jobs exist
         run: |
-          if ! gcloud run jobs describe "${MIGRATION_JOB}" \
-            --project="${PROJECT_ID}" \
-            --region="${REGION}" \
-            --format='value(metadata.name)'; then
-            echo "Migration job ${MIGRATION_JOB} is missing or inaccessible. Provision it before deploying." >&2
-            exit 1
-          fi
+          for JOB in "${MIGRATION_JOB}" "${SEED_JOB}"; do
+            if ! gcloud run jobs describe "${JOB}" \
+              --project="${PROJECT_ID}" \
+              --region="${REGION}" \
+              --format='value(metadata.name)'; then
+              echo "Cloud Run Job ${JOB} is missing or inaccessible. Provision it before releasing." >&2
+              exit 1
+            fi
+          done
 
       - name: Configure Docker for Artifact Registry
         run: |
@@ -125,6 +127,22 @@ jobs:
       - name: Run Alembic migrations
         run: |
           gcloud run jobs execute "${MIGRATION_JOB}" \
+            --project="${PROJECT_ID}" \
+            --region="${REGION}" \
+            --wait
+
+      - name: Update reference seed job image
+        run: |
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY_ID}/${IMAGE_NAME}:${{ inputs.commit_sha }}"
+
+          gcloud run jobs update "${SEED_JOB}" \
+            --project="${PROJECT_ID}" \
+            --region="${REGION}" \
+            --image="${IMAGE}"
+
+      - name: Seed reference data
+        run: |
+          gcloud run jobs execute "${SEED_JOB}" \
             --project="${PROJECT_ID}" \
             --region="${REGION}" \
             --wait
