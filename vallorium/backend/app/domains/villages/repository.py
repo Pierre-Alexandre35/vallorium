@@ -553,14 +553,24 @@ def insert_farm_upgrade(
     return upgrade
 
 
-def get_farm_plots_for_village(
+def get_farm_plots_with_active_upgrades_for_village(
     db_sess: Session,
     *,
     village_id: int,
-) -> list[db.VillageFarmPlot]:
+) -> list[tuple[db.VillageFarmPlot, db.VillageFarmUpgrade | None]]:
     """Load farm plots after the service has already authorized the village."""
     return (
-        db_sess.query(db.VillageFarmPlot)
+        db_sess.query(
+            db.VillageFarmPlot,
+            db.VillageFarmUpgrade,
+        )
+        .outerjoin(
+            db.VillageFarmUpgrade,
+            and_(
+                db.VillageFarmUpgrade.village_farm_plot_id == db.VillageFarmPlot.id,
+                db.VillageFarmUpgrade.status == db.UpgradeStatus.IN_PROGRESS,
+            ),
+        )
         .options(
             joinedload(db.VillageFarmPlot.resource_type),
         )

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List
 
 from pydantic import Field, field_validator
@@ -70,8 +71,15 @@ class FarmUpgradeOut(AppBaseModel):
     duration_seconds: int
 
 
+class ActiveFarmUpgradeOut(AppBaseModel):
+    upgrade_id: int
+    target_level: int
+    completes_at: datetime
+
+
 class VillageFarmOut(AppBaseModel):
     id: int
     farm_number: int
     level: int
     resource_type: ResourceTypeOut
+    active_upgrade: ActiveFarmUpgradeOut | None = None
