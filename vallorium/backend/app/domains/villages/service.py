@@ -8,11 +8,14 @@ from sqlalchemy.orm import Session
 import app.domains.resources.repository as resource_repo
 import app.domains.resources.service as resource_service
 import app.domains.villages.repository as village_repo
-from app.db.models import MapTile, Resource, UpgradeStatus, Village, VillageFarmPlot
+from app.db.models import MapTile, Resource, UpgradeStatus, Village
 from app.domains.resources.schemas import ResourceBalance, ResourceProduction
 from app.domains.villages.schemas import (
+    ActiveFarmUpgradeOut,
     FarmUpgradeOut,
+    ResourceTypeOut,
     VillageCreate,
+    VillageFarmOut,
     VillageNameOut,
     VillageProductionOut,
     VillageResourceOut,
@@ -634,8 +637,9 @@ def get_village_farms(
     db: Session,
     village_id: int,
     owner_id: int,
-) -> list[VillageFarmPlot]:
+) -> list[VillageFarmOut]:
     now = datetime.now(timezone.utc)
+
     reconcile_owned_village_if_due(
         db,
         village_id=village_id,
@@ -643,7 +647,26 @@ def get_village_farms(
         now=now,
     )
 
-    return village_repo.get_farm_plots_for_village(
+    farm_rows = village_repo.get_farm_plots_with_active_upgrades_for_village(
         db_sess=db,
         village_id=village_id,
     )
+
+    return [
+        VillageFarmOut(
+            id=farm.id,
+            farm_number=farm.farm_number,
+            level=farm.level,
+            resource_type=ResourceTypeOut.model_validate(farm.resource_type),
+            active_upgrade=(
+                ActiveFarmUpgradeOut(
+                    upgrade_id=upgrade.id,
+                    target_level=upgrade.target_level,
+                    completes_at=upgrade.completes_at,
+                )
+                if upgrade is not None
+                else None
+            ),
+        )
+        for farm, upgrade in farm_rows
+    ]

@@ -1,3 +1,4 @@
+import ConstructionRoundedIcon from "@mui/icons-material/ConstructionRounded";
 import { Box } from "@mui/material";
 
 import styles from "@/features/villages/components/fields/farm-plot-button.module.css";
@@ -11,6 +12,8 @@ interface FarmPlotButtonProps {
   left: string;
   top: string;
   selected: boolean;
+  upgrading: boolean;
+  targetLevel?: number;
   onSelect: () => void;
 }
 
@@ -20,6 +23,8 @@ export function FarmPlotButton({
   left,
   top,
   selected,
+  upgrading,
+  targetLevel,
   onSelect,
 }: FarmPlotButtonProps) {
   const meta = resourceMeta[resource];
@@ -37,8 +42,12 @@ export function FarmPlotButton({
       type="button"
       className={styles.plot}
       data-selected={selected}
+      data-upgrading={upgrading}
       aria-pressed={selected}
-      aria-label={`${meta.label} field, level ${level}`}
+      aria-label={
+        `${meta.label} field, level ${level}` +
+        (upgrading ? `, upgrading to level ${targetLevel ?? level + 1}` : "")
+      }
       onClick={onSelect}
       style={style}
     >
@@ -46,6 +55,11 @@ export function FarmPlotButton({
         <Icon className={styles.icon} />
       </Box>
       <Box className={styles.levelBadge}>{level}</Box>
+      {upgrading && (
+        <Box className={styles.constructionBadge} aria-hidden="true">
+          <ConstructionRoundedIcon sx={{ fontSize: 12 }} />
+        </Box>
+      )}
     </Box>
   );
 }

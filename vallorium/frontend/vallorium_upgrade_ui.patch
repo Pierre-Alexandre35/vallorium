@@ -1,0 +1,517 @@
+diff --git a/src/features/villages/components/fields/farm-plot-button.module.css b/src/features/villages/components/fields/farm-plot-button.module.css
+index db24ef8..5d34c28 100644
+--- a/src/features/villages/components/fields/farm-plot-button.module.css
++++ b/src/features/villages/components/fields/farm-plot-button.module.css
+@@ -82,6 +82,29 @@
+     transform var(--game-motion-quick);
+ }
+ 
++/* Construction markers stay colorful enough to identify their resource,
++   while the extra badge makes status independent of color perception. */
++.plot[data-upgrading="true"] .iconSurface {
++  filter: saturate(0.5);
++  border-color: var(--village-construction-border);
++}
++
++.constructionBadge {
++  position: absolute;
++  z-index: 3;
++  top: -4px;
++  right: -5px;
++  display: grid;
++  width: 20px;
++  height: 20px;
++  place-items: center;
++  color: var(--village-construction-icon);
++  border: 1px solid var(--village-construction-border);
++  border-radius: 50%;
++  background: var(--village-construction-background);
++  box-shadow: 0 2px 5px rgba(48, 43, 31, 0.2);
++}
++
+ .plot:hover {
+   z-index: 6;
+   transform: translate(-50%, -50%) translateY(-2px) scale(1.06);
+diff --git a/src/features/villages/components/fields/farm-plot-button.tsx b/src/features/villages/components/fields/farm-plot-button.tsx
+index dccd996..a08f8f2 100644
+--- a/src/features/villages/components/fields/farm-plot-button.tsx
++++ b/src/features/villages/components/fields/farm-plot-button.tsx
+@@ -1,3 +1,4 @@
++import ConstructionRoundedIcon from "@mui/icons-material/ConstructionRounded";
+ import { Box } from "@mui/material";
+ 
+ import styles from "@/features/villages/components/fields/farm-plot-button.module.css";
+@@ -11,6 +12,8 @@ interface FarmPlotButtonProps {
+   left: string;
+   top: string;
+   selected: boolean;
++  upgrading: boolean;
++  targetLevel?: number;
+   onSelect: () => void;
+ }
+ 
+@@ -20,6 +23,8 @@ export function FarmPlotButton({
+   left,
+   top,
+   selected,
++  upgrading,
++  targetLevel,
+   onSelect,
+ }: FarmPlotButtonProps) {
+   const meta = resourceMeta[resource];
+@@ -37,8 +42,12 @@ export function FarmPlotButton({
+       type="button"
+       className={styles.plot}
+       data-selected={selected}
++      data-upgrading={upgrading}
+       aria-pressed={selected}
+-      aria-label={`${meta.label} field, level ${level}`}
++      aria-label={
++        `${meta.label} field, level ${level}` +
++        (upgrading ? `, upgrading to level ${targetLevel ?? level + 1}` : "")
++      }
+       onClick={onSelect}
+       style={style}
+     >
+@@ -46,6 +55,11 @@ export function FarmPlotButton({
+         <Icon className={styles.icon} />
+       </Box>
+       <Box className={styles.levelBadge}>{level}</Box>
++      {upgrading && (
++        <Box className={styles.constructionBadge} aria-hidden="true">
++          <ConstructionRoundedIcon sx={{ fontSize: 12 }} />
++        </Box>
++      )}
+     </Box>
+   );
+ }
+diff --git a/src/features/villages/components/fields/farm-terrain.module.css b/src/features/villages/components/fields/farm-terrain.module.css
+index 3965f4c..876932b 100644
+--- a/src/features/villages/components/fields/farm-terrain.module.css
++++ b/src/features/villages/components/fields/farm-terrain.module.css
+@@ -25,6 +25,13 @@
+     stroke-width var(--game-motion-quick);
+ }
+ 
++/* Highlight only the field being built; don't wash out the whole map. */
++.segment[data-upgrading="true"] {
++  filter: saturate(0.52) brightness(0.96);
++  stroke: var(--village-construction-border);
++  stroke-width: 0.55;
++}
++
+ .segment:hover {
+   filter: brightness(1.05) saturate(1.03);
+ }
+@@ -35,6 +42,10 @@
+   stroke-width: 0.72;
+ }
+ 
++.segment[data-selected="true"][data-upgrading="true"] {
++  filter: saturate(0.7) brightness(1.04);
++}
++
+ .outerGround,
+ .outerEdge,
+ .ringDivider,
+diff --git a/src/features/villages/components/fields/farm-terrain.tsx b/src/features/villages/components/fields/farm-terrain.tsx
+index cd43a73..a7de523 100644
+--- a/src/features/villages/components/fields/farm-terrain.tsx
++++ b/src/features/villages/components/fields/farm-terrain.tsx
+@@ -11,6 +11,7 @@ import type { ResourceKey } from "@/features/villages/types/village";
+ interface FarmTerrainPlot {
+   farmNumber: number;
+   resource: ResourceKey;
++  upgrading: boolean;
+ }
+ 
+ interface FarmTerrainProps {
+@@ -207,6 +208,7 @@ export function FarmTerrain({
+             key={slot.farmNumber}
+             className={styles.segment}
+             data-selected={slot.farmNumber === selectedFarmNumber}
++            data-upgrading={plot.upgrading}
+             d={path}
+             fill={`url(#${patternId})`}
+             onClick={() => onSelectFarm(slot.farmNumber)}
+diff --git a/src/features/villages/components/fields/village-field-map.module.css b/src/features/villages/components/fields/village-field-map.module.css
+index 5d0caf9..d1c4a96 100644
+--- a/src/features/villages/components/fields/village-field-map.module.css
++++ b/src/features/villages/components/fields/village-field-map.module.css
+@@ -68,6 +68,17 @@
+   backdrop-filter: blur(8px);
+ }
+ 
++.selectionPanel[data-upgrading="true"] {
++  border-color: var(--village-construction-border);
++  background-color: var(--village-construction-background);
++}
++
++.upgradingButton:global(.Mui-disabled) {
++  color: var(--village-construction-text);
++  border-color: var(--village-construction-border);
++  background-color: rgba(255, 255, 255, 0.4);
++}
++
+ @media (min-width: 600px) {
+   .mapPanel:global(.MuiPaper-root) {
+     padding: 16px;
+diff --git a/src/features/villages/components/fields/village-field-map.tsx b/src/features/villages/components/fields/village-field-map.tsx
+index 11cad28..de51810 100644
+--- a/src/features/villages/components/fields/village-field-map.tsx
++++ b/src/features/villages/components/fields/village-field-map.tsx
+@@ -1,7 +1,10 @@
+ import ArrowUpwardRoundedIcon from "@mui/icons-material/ArrowUpwardRounded";
+ import CastleRoundedIcon from "@mui/icons-material/CastleRounded";
+-import { Box, Button, Stack, Typography } from "@mui/material";
+-import { useState } from "react";
++import ConstructionRoundedIcon from "@mui/icons-material/ConstructionRounded";
++import { Alert, Box, Button, Snackbar, Stack, Typography } from "@mui/material";
++import { useQueryClient } from "@tanstack/react-query";
++import { isAxiosError } from "axios";
++import { useEffect, useState } from "react";
+ 
+ import { GamePanel } from "@/components/ui/game-panel";
+ import {
+@@ -15,7 +18,10 @@ import { ResourceIcon } from "@/features/villages/components/resources/resource-
+ import { resourceMeta } from "@/features/villages/config/resource-meta";
+ import { useVillageFarms } from "@/features/villages/hooks/use-village-farms";
+ import { useUpgradeFarm } from "@/features/villages/hooks/use-upgrade-farm";
+-import type { ResourceKey } from "@/features/villages/types/village";
++import type {
++  ActiveFarmUpgrade,
++  ResourceKey,
++} from "@/features/villages/types/village";
+ import {
+   gameShadows,
+   gameTokens,
+@@ -32,6 +38,8 @@ interface FieldPlot {
+   farmNumber: number;
+   resource: ResourceKey;
+   level: number;
++  activeUpgrade: ActiveFarmUpgrade | null;
++  upgrading: boolean;
+   left: string;
+   top: string;
+ }
+@@ -56,6 +64,10 @@ const mapVariables: GameCssProperties = {
+   "--farm-marker-surface": gameTokens.colors.surface.paper,
+   "--farm-marker-text": gameTokens.colors.text.primary,
+   "--game-motion-quick": gameTokens.motion.quick,
++  "--village-construction-background": gameTokens.colors.construction.background,
++  "--village-construction-border": gameTokens.colors.construction.border,
++  "--village-construction-icon": gameTokens.colors.construction.icon,
++  "--village-construction-text": gameTokens.colors.construction.text,
+ };
+ 
+ function toResourceKey(resourceName: string): ResourceKey | null {
+@@ -66,10 +78,70 @@ function toResourceKey(resourceName: string): ResourceKey | null {
+     : null;
+ }
+ 
++function upgradeErrorMessage(error: unknown): string {
++  if (isAxiosError(error)) {
++    const detail: unknown = error.response?.data?.detail;
++    if (typeof detail === "string") return detail;
++    if (error.response?.status === 409) {
++      return "Upgrade rejected: check available resources or existing construction.";
++    }
++  }
++  return "Unable to start the upgrade. Please try again.";
++}
++
++function formatRemaining(milliseconds: number): string {
++  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
++  const hours = Math.floor(totalSeconds / 3600);
++  const minutes = Math.floor((totalSeconds % 3600) / 60);
++  const seconds = totalSeconds % 60;
++
++  return hours > 0
++    ? `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
++    : `${minutes}:${String(seconds).padStart(2, "0")}`;
++}
++
+ export function VillageFieldMap({ villageId }: VillageFieldMapProps) {
++  const queryClient = useQueryClient();
+   const [selectedFarmNumber, setSelectedFarmNumber] = useState(13);
++  const [now, setNow] = useState(() => Date.now());
+   const { data: farms = [], isLoading, isError } = useVillageFarms(villageId);
+   const upgradeFarmMutation = useUpgradeFarm(villageId);
++  const hasActiveUpgrade = farms.some((farm) => farm.active_upgrade != null);
++
++  // Countdown is purely presentational. Never change field levels locally.
++  useEffect(() => {
++    if (!hasActiveUpgrade) return;
++    const interval = window.setInterval(() => setNow(Date.now()), 1000);
++    return () => window.clearInterval(interval);
++  }, [hasActiveUpgrade]);
++
++  // Refresh when the nearest construction is due, including when the game
++  // remains open for hours. The server is the authority on actual completion.
++  const nextCompletionAt = farms.reduce((earliest, farm) => {
++    const completesAt = farm.active_upgrade?.completes_at;
++    if (!completesAt) return earliest;
++    const deadline = Date.parse(completesAt);
++    return Number.isFinite(deadline) ? Math.min(earliest, deadline) : earliest;
++  }, Number.POSITIVE_INFINITY);
++
++  useEffect(() => {
++    if (!Number.isFinite(nextCompletionAt)) return;
++    const delay = Math.min(
++      2_147_483_647,
++      Math.max(0, nextCompletionAt - Date.now() + 750),
++    );
++    const timeout = window.setTimeout(() => {
++      void Promise.all([
++        queryClient.invalidateQueries({
++          queryKey: ["villages", villageId, "farms"],
++        }),
++        queryClient.invalidateQueries({
++          queryKey: ["dashboard", "current"],
++        }),
++      ]);
++    }, delay);
++    return () => window.clearTimeout(timeout);
++  }, [nextCompletionAt, queryClient, villageId]);
+ 
+   const farmsByNumber = new Map(farms.map((farm) => [farm.farm_number, farm]));
+ 
+@@ -92,6 +164,8 @@ export function VillageFieldMap({ villageId }: VillageFieldMapProps) {
+         farmNumber: farm.farm_number,
+         resource,
+         level: farm.level,
++        activeUpgrade: farm.active_upgrade ?? null,
++        upgrading: farm.active_upgrade != null,
+         ...getFarmFieldPosition(layoutSlot),
+       },
+     ];
+@@ -99,6 +173,16 @@ export function VillageFieldMap({ villageId }: VillageFieldMapProps) {
+ 
+   const selected =
+     plots.find((plot) => plot.farmNumber === selectedFarmNumber) ?? plots[0];
++  const selectedUpgrade = selected?.activeUpgrade;
++  const isStartingSelected =
++    upgradeFarmMutation.isPending &&
++    upgradeFarmMutation.variables === selected?.id;
++  const completionTime = selectedUpgrade
++    ? Date.parse(selectedUpgrade.completes_at)
++    : Number.NaN;
++  const remainingTime = Number.isFinite(completionTime)
++    ? formatRemaining(completionTime - Math.max(now, Date.now()))
++    : null;
+ 
+   if (isLoading) {
+     return (
+@@ -133,6 +217,8 @@ export function VillageFieldMap({ villageId }: VillageFieldMapProps) {
+             left={plot.left}
+             top={plot.top}
+             selected={selected.farmNumber === plot.farmNumber}
++            upgrading={plot.upgrading}
++            targetLevel={plot.activeUpgrade?.target_level}
+             onSelect={() => setSelectedFarmNumber(plot.farmNumber)}
+           />
+         ))}
+@@ -156,6 +242,7 @@ export function VillageFieldMap({ villageId }: VillageFieldMapProps) {
+ 
+       <Stack
+         className={styles.selectionPanel}
++        data-upgrading={Boolean(selectedUpgrade)}
+         direction={{ xs: "column", sm: "row" }}
+         alignItems={{ xs: "stretch", sm: "center" }}
+         justifyContent="space-between"
+@@ -167,23 +254,54 @@ export function VillageFieldMap({ villageId }: VillageFieldMapProps) {
+             <Typography fontWeight={gameTokens.typography.weight.heavy}>
+               {resourceMeta[selected.resource].label} field · Level{" "}
+               {selected.level}
++              {selectedUpgrade ? ` → ${selectedUpgrade.target_level}` : ""}
+             </Typography>
+             <Typography variant="body2" color="text.secondary">
+-              Next level adds +{selected.level * 8 + 34}/h production
++              {selectedUpgrade
++                ? remainingTime === "0:00"
++                  ? "Finishing construction…"
++                  : remainingTime
++                    ? `Construction · ${remainingTime} remaining`
++                    : "Construction in progress"
++                : `Next level adds +${selected.level * 8 + 34}/h production`}
+             </Typography>
+           </Box>
+         </Stack>
+ 
+         <Button
+-          variant="contained"
+-          startIcon={<ArrowUpwardRoundedIcon />}
++          variant={selectedUpgrade ? "outlined" : "contained"}
++          className={selectedUpgrade ? styles.upgradingButton : undefined}
++          startIcon={
++            selectedUpgrade ? (
++              <ConstructionRoundedIcon />
++            ) : (
++              <ArrowUpwardRoundedIcon />
++            )
++          }
++          disabled={Boolean(selectedUpgrade) || upgradeFarmMutation.isPending}
+           onClick={() => upgradeFarmMutation.mutate(selected.id)}
+         >
+-          {upgradeFarmMutation.isPending
+-            ? "Upgrading..."
+-            : `Upgrade to ${selected.level + 1}`}
++          {selectedUpgrade
++            ? `Upgrading to ${selectedUpgrade.target_level}`
++            : isStartingSelected
++              ? "Starting…"
++              : `Upgrade to ${selected.level + 1}`}
+         </Button>
+       </Stack>
++      <Snackbar
++        open={upgradeFarmMutation.isError}
++        autoHideDuration={5_000}
++        onClose={() => upgradeFarmMutation.reset()}
++        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
++      >
++        <Alert
++          onClose={() => upgradeFarmMutation.reset()}
++          severity="error"
++          variant="filled"
++        >
++          {upgradeErrorMessage(upgradeFarmMutation.error)}
++        </Alert>
++      </Snackbar>
+     </GamePanel>
+   );
+ }
+diff --git a/src/features/villages/hooks/use-upgrade-farm.ts b/src/features/villages/hooks/use-upgrade-farm.ts
+index df07201..8a739fa 100644
+--- a/src/features/villages/hooks/use-upgrade-farm.ts
++++ b/src/features/villages/hooks/use-upgrade-farm.ts
+@@ -1,12 +1,44 @@
+ import { useMutation, useQueryClient } from "@tanstack/react-query";
+ 
+ import { upgradeFarm } from "@/features/villages/api/upgrade-farm";
++import type { VillageFarm } from "@/features/villages/types/village";
+ 
+ export function useUpgradeFarm(villageId: number) {
+   const queryClient = useQueryClient();
++  const farmsQueryKey = ["villages", villageId, "farms"] as const;
++
+   return useMutation({
+-    onSuccess: () =>
+-      queryClient.invalidateQueries({ queryKey: ["dashboard", "current"] }),
+     mutationFn: (farmId: number) => upgradeFarm(villageId, farmId),
++    onSuccess: async (result) => {
++      // Prevent an older in-flight farms GET from overwriting the acknowledged
++      // upgrade. The server will become authoritative again on the next GET.
++      await queryClient.cancelQueries({ queryKey: farmsQueryKey });
++
++      queryClient.setQueryData<VillageFarm[]>(farmsQueryKey, (farms) =>
++        farms?.map((farm) =>
++          farm.id === result.farm_id
++            ? {
++                ...farm,
++                active_upgrade: {
++                  upgrade_id: result.upgrade_id,
++                  target_level: result.target_level,
++                  // Backward-compatible for now, until the API provides the
++                  // authoritative `completes_at` timestamp.
++                  completes_at:
++                    result.completes_at ??
++                    new Date(
++                      Date.now() + result.duration_seconds * 1000,
++                    ).toISOString(),
++                },
++              }
++            : farm,
++        ),
++      );
++
++      // The backend already deducted resources when it accepted the upgrade.
++      void queryClient.invalidateQueries({
++        queryKey: ["dashboard", "current"],
++      });
++    },
+   });
+ }
+diff --git a/src/features/villages/hooks/use-village-farms.ts b/src/features/villages/hooks/use-village-farms.ts
+index 2797511..bc936e0 100644
+--- a/src/features/villages/hooks/use-village-farms.ts
++++ b/src/features/villages/hooks/use-village-farms.ts
+@@ -1,11 +1,25 @@
+ import { useQuery } from "@tanstack/react-query";
+ 
+ import { getVillageFarms } from "@/features/villages/api/get-village-farms";
++import type { VillageFarm } from "@/features/villages/types/village";
+ 
+ export function useVillageFarms(villageId: number | null | undefined) {
+   return useQuery({
+     queryKey: ["villages", villageId, "farms"],
+     queryFn: ({ signal }) => getVillageFarms(villageId!, signal),
+     enabled: villageId != null,
++    refetchOnWindowFocus: "always",
++    refetchOnReconnect: "always",
++    // No constant polling while construction is running. A single timer in
++    // VillageFieldMap refreshes at the deadline. If backend settlement is
++    // briefly delayed, retry the due construction at a modest interval.
++    refetchInterval: (query) => {
++      const farms = query.state.data as VillageFarm[] | undefined;
++      const awaitingSettlement = farms?.some((farm) => {
++        const expires = farm.active_upgrade?.completes_at;
++        return expires != null && Date.parse(expires) <= Date.now();
++      });
++      return awaitingSettlement ? 5_000 : false;
++    },
+   });
+ }
+diff --git a/src/features/villages/types/village.ts b/src/features/villages/types/village.ts
+index 0998fe5..b26e3f2 100644
+--- a/src/features/villages/types/village.ts
++++ b/src/features/villages/types/village.ts
+@@ -48,6 +48,16 @@ export type Village = {
+   };
+ };
+ 
++/**
++ * Only active upgrades are included. `completes_at` must be an ISO-8601
++ * timestamp with a timezone, supplied by the server.
++ */
++export type ActiveFarmUpgrade = {
++  upgrade_id: number;
++  target_level: number;
++  completes_at: string;
++};
++
+ export type VillageFarm = {
+   id: number;
+   farm_number: number;
+@@ -55,6 +65,8 @@ export type VillageFarm = {
+   resource_type: {
+     name: string;
+   };
++  /** The backend must return this field for refresh-safe construction state. */
++  active_upgrade?: ActiveFarmUpgrade | null;
+ };
+ 
+ export type FarmUpgrade = {
+@@ -68,4 +80,6 @@ export type FarmUpgrade = {
+   target_level: number;
+   status: string;
+   duration_seconds: number;
++  /** New response field: the authoritative construction deadline. */
++  completes_at?: string;
+ };
+diff --git a/src/theme/tokens.ts b/src/theme/tokens.ts
+index a305383..f1a19c1 100644
+--- a/src/theme/tokens.ts
++++ b/src/theme/tokens.ts
+@@ -46,6 +46,12 @@ export const gameTokens = {
+       crop: "#9aaf3c",
+       cropLight: "#eef2d5",
+     },
++    construction: {
++      background: "#f0eee6",
++      border: "#ccc6b7",
++      icon: "#7b8179",
++      text: "#656b61",
++    },
+     danger: "#b84d42",
+     overlay: {
+       appBar: "rgba(255, 253, 248, .94)",
