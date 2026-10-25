@@ -25,6 +25,13 @@
     stroke-width var(--game-motion-quick);
 }
 
+/* Highlight only the field being built; don't wash out the whole map. */
+.segment[data-upgrading="true"] {
+  filter: saturate(0.52) brightness(0.96);
+  stroke: var(--village-construction-border);
+  stroke-width: 0.55;
+}
+
 .segment:hover {
   filter: brightness(1.05) saturate(1.03);
 }
@@ -33,6 +40,10 @@
   filter: brightness(1.09) saturate(1.06);
   stroke: rgba(255, 251, 235, 0.92);
   stroke-width: 0.72;
+}
+
+.segment[data-selected="true"][data-upgrading="true"] {
+  filter: saturate(0.7) brightness(1.04);
 }
 
 .outerGround,

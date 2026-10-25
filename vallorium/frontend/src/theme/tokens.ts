@@ -46,6 +46,12 @@ export const gameTokens = {
       crop: "#9aaf3c",
       cropLight: "#eef2d5",
     },
+    construction: {
+      background: "#f0eee6",
+      border: "#ccc6b7",
+      icon: "#7b8179",
+      text: "#656b61",
+    },
     danger: "#b84d42",
     overlay: {
       appBar: "rgba(255, 253, 248, .94)",

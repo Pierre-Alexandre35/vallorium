@@ -11,6 +11,7 @@ import type { ResourceKey } from "@/features/villages/types/village";
 interface FarmTerrainPlot {
   farmNumber: number;
   resource: ResourceKey;
+  upgrading: boolean;
 }
 
 interface FarmTerrainProps {
@@ -207,6 +208,7 @@ export function FarmTerrain({
             key={slot.farmNumber}
             className={styles.segment}
             data-selected={slot.farmNumber === selectedFarmNumber}
+            data-upgrading={plot.upgrading}
             d={path}
             fill={`url(#${patternId})`}
             onClick={() => onSelectFarm(slot.farmNumber)}

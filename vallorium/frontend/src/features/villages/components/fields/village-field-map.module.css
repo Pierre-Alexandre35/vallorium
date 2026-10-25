@@ -68,6 +68,17 @@
   backdrop-filter: blur(8px);
 }
 
+.selectionPanel[data-upgrading="true"] {
+  border-color: var(--village-construction-border);
+  background-color: var(--village-construction-background);
+}
+
+.upgradingButton:global(.Mui-disabled) {
+  color: var(--village-construction-text);
+  border-color: var(--village-construction-border);
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
 @media (min-width: 600px) {
   .mapPanel:global(.MuiPaper-root) {
     padding: 16px;

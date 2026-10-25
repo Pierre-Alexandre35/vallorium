@@ -82,6 +82,27 @@
     transform var(--game-motion-quick);
 }
 
+.plot[data-upgrading="true"] .iconSurface {
+  filter: saturate(0.5);
+  border-color: var(--village-construction-border);
+}
+
+.constructionBadge {
+  position: absolute;
+  z-index: 3;
+  top: -4px;
+  right: -5px;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  color: var(--village-construction-icon);
+  border: 1px solid var(--village-construction-border);
+  border-radius: 50%;
+  background: var(--village-construction-background);
+  box-shadow: 0 2px 5px rgba(48, 43, 31, 0.2);
+}
+
 .plot:hover {
   z-index: 6;
   transform: translate(-50%, -50%) translateY(-2px) scale(1.06);

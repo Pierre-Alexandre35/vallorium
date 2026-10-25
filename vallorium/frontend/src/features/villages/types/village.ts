@@ -48,6 +48,16 @@ export type Village = {
   };
 };
 
+/**
+ * Only active upgrades are included. `completes_at` must be an ISO-8601
+ * timestamp with a timezone, supplied by the server.
+ */
+export type ActiveFarmUpgrade = {
+  upgrade_id: number;
+  target_level: number;
+  completes_at: string;
+};
+
 export type VillageFarm = {
   id: number;
   farm_number: number;
@@ -55,6 +65,8 @@ export type VillageFarm = {
   resource_type: {
     name: string;
   };
+  /** The backend must return this field for refresh-safe construction state. */
+  active_upgrade?: ActiveFarmUpgrade | null;
 };
 
 export type FarmUpgrade = {
@@ -68,4 +80,6 @@ export type FarmUpgrade = {
   target_level: number;
   status: string;
   duration_seconds: number;
+  /** New response field: the authoritative construction deadline. */
+  completes_at?: string;
 };
