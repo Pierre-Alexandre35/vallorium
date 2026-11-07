@@ -44,13 +44,13 @@ capacities:
 farm_levels:
   WOOD:
     - level: 0
-      production_per_hour: 30
+      production_per_hour: 3
       construction_time_seconds: 0
       cost: {}
 
     - level: 1
-      production_per_hour: 40
-      construction_time_seconds: 60
+      production_per_hour: 7
+      construction_time_seconds: 260
       cost:
         WOOD: 40
         CLAY: 100
@@ -58,23 +58,95 @@ farm_levels:
         CROP: 60
 
     - level: 2
-      production_per_hour: 50
-      construction_time_seconds: 120
+      production_per_hour: 13
+      construction_time_seconds: 620
       cost:
         WOOD: 65
         CLAY: 165
         IRON: 85
         CROP: 100
 
+    - level: 3
+      production_per_hour: 21
+      construction_time_seconds: 1190
+      cost:
+        WOOD: 110
+        CLAY: 280
+        IRON: 140
+        CROP: 165
+
+    - level: 4
+      production_per_hour: 31
+      construction_time_seconds: 2100
+      cost:
+        WOOD: 185
+        CLAY: 465
+        IRON: 235
+        CROP: 280
+
+    - level: 5
+      production_per_hour: 46
+      construction_time_seconds: 3560
+      cost:
+        WOOD: 310
+        CLAY: 780
+        IRON: 390
+        CROP: 465
+
+    - level: 6
+      production_per_hour: 70
+      construction_time_seconds: 5890
+      cost:
+        WOOD: 520
+        CLAY: 1300
+        IRON: 650
+        CROP: 780
+
+    - level: 7
+      production_per_hour: 98
+      construction_time_seconds: 9620
+      cost:
+        WOOD: 870
+        CLAY: 2170
+        IRON: 1085
+        CROP: 1300
+
+    - level: 8
+      production_per_hour: 140
+      construction_time_seconds: 15590
+      cost:
+        WOOD: 1450
+        CLAY: 3625
+        IRON: 1810
+        CROP: 2175
+
+    - level: 9
+      production_per_hour: 203
+      construction_time_seconds: 25150
+      cost:
+        WOOD: 2420
+        CLAY: 6050
+        IRON: 3025
+        CROP: 3630
+
+    - level: 10
+      production_per_hour: 280
+      construction_time_seconds: 40440
+      cost:
+        WOOD: 4040
+        CLAY: 10105
+        IRON: 5050
+        CROP: 6060
+
   CLAY:
     - level: 0
-      production_per_hour: 30
+      production_per_hour: 3
       construction_time_seconds: 0
       cost: {}
 
     - level: 1
-      production_per_hour: 40
-      construction_time_seconds: 60
+      production_per_hour: 7
+      construction_time_seconds: 220
       cost:
         WOOD: 80
         CLAY: 40
@@ -82,23 +154,95 @@ farm_levels:
         CROP: 50
 
     - level: 2
-      production_per_hour: 50
-      construction_time_seconds: 120
+      production_per_hour: 13
+      construction_time_seconds: 550
       cost:
         WOOD: 135
         CLAY: 65
         IRON: 135
         CROP: 85
 
+    - level: 3
+      production_per_hour: 21
+      construction_time_seconds: 1080
+      cost:
+        WOOD: 225
+        CLAY: 110
+        IRON: 225
+        CROP: 140
+
+    - level: 4
+      production_per_hour: 31
+      construction_time_seconds: 1930
+      cost:
+        WOOD: 375
+        CLAY: 185
+        IRON: 375
+        CROP: 235
+
+    - level: 5
+      production_per_hour: 46
+      construction_time_seconds: 3290
+      cost:
+        WOOD: 620
+        CLAY: 310
+        IRON: 620
+        CROP: 390
+
+    - level: 6
+      production_per_hour: 70
+      construction_time_seconds: 5470
+      cost:
+        WOOD: 1040
+        CLAY: 520
+        IRON: 1040
+        CROP: 650
+
+    - level: 7
+      production_per_hour: 98
+      construction_time_seconds: 8950
+      cost:
+        WOOD: 1735
+        CLAY: 870
+        IRON: 1735
+        CROP: 1085
+
+    - level: 8
+      production_per_hour: 140
+      construction_time_seconds: 14520
+      cost:
+        WOOD: 2900
+        CLAY: 1450
+        IRON: 2900
+        CROP: 1810
+
+    - level: 9
+      production_per_hour: 203
+      construction_time_seconds: 23430
+      cost:
+        WOOD: 4840
+        CLAY: 2420
+        IRON: 4840
+        CROP: 3025
+
+    - level: 10
+      production_per_hour: 280
+      construction_time_seconds: 37690
+      cost:
+        WOOD: 8080
+        CLAY: 4040
+        IRON: 8080
+        CROP: 5050
+
   IRON:
     - level: 0
-      production_per_hour: 30
+      production_per_hour: 3
       construction_time_seconds: 0
       cost: {}
 
     - level: 1
-      production_per_hour: 40
-      construction_time_seconds: 60
+      production_per_hour: 7
+      construction_time_seconds: 450
       cost:
         WOOD: 100
         CLAY: 80
@@ -106,23 +250,95 @@ farm_levels:
         CROP: 60
 
     - level: 2
-      production_per_hour: 50
-      construction_time_seconds: 120
+      production_per_hour: 13
+      construction_time_seconds: 920
       cost:
         WOOD: 165
         CLAY: 135
         IRON: 50
         CROP: 100
 
+    - level: 3
+      production_per_hour: 21
+      construction_time_seconds: 1670
+      cost:
+        WOOD: 280
+        CLAY: 225
+        IRON: 85
+        CROP: 165
+
+    - level: 4
+      production_per_hour: 31
+      construction_time_seconds: 2880
+      cost:
+        WOOD: 465
+        CLAY: 375
+        IRON: 140
+        CROP: 280
+
+    - level: 5
+      production_per_hour: 46
+      construction_time_seconds: 4800
+      cost:
+        WOOD: 780
+        CLAY: 620
+        IRON: 235
+        CROP: 465
+
+    - level: 6
+      production_per_hour: 70
+      construction_time_seconds: 7880
+      cost:
+        WOOD: 1300
+        CLAY: 1040
+        IRON: 390
+        CROP: 780
+
+    - level: 7
+      production_per_hour: 98
+      construction_time_seconds: 12810
+      cost:
+        WOOD: 2170
+        CLAY: 1735
+        IRON: 650
+        CROP: 1300
+
+    - level: 8
+      production_per_hour: 140
+      construction_time_seconds: 20690
+      cost:
+        WOOD: 3625
+        CLAY: 2900
+        IRON: 1085
+        CROP: 2175
+
+    - level: 9
+      production_per_hour: 203
+      construction_time_seconds: 33310
+      cost:
+        WOOD: 6050
+        CLAY: 4840
+        IRON: 1815
+        CROP: 3630
+
+    - level: 10
+      production_per_hour: 280
+      construction_time_seconds: 53500
+      cost:
+        WOOD: 10105
+        CLAY: 8080
+        IRON: 3030
+        CROP: 6060
+
   CROP:
     - level: 0
-      production_per_hour: 30
+      production_per_hour: 3
       construction_time_seconds: 0
       cost: {}
 
     - level: 1
-      production_per_hour: 40
-      construction_time_seconds: 60
+      production_per_hour: 7
+      construction_time_seconds: 150
       cost:
         WOOD: 70
         CLAY: 90
@@ -130,13 +346,85 @@ farm_levels:
         CROP: 20
 
     - level: 2
-      production_per_hour: 50
-      construction_time_seconds: 120
+      production_per_hour: 13
+      construction_time_seconds: 440
       cost:
         WOOD: 115
         CLAY: 150
         IRON: 115
         CROP: 35
+
+    - level: 3
+      production_per_hour: 21
+      construction_time_seconds: 900
+      cost:
+        WOOD: 195
+        CLAY: 250
+        IRON: 195
+        CROP: 55
+
+    - level: 4
+      production_per_hour: 31
+      construction_time_seconds: 1650
+      cost:
+        WOOD: 325
+        CLAY: 420
+        IRON: 325
+        CROP: 95
+
+    - level: 5
+      production_per_hour: 46
+      construction_time_seconds: 2830
+      cost:
+        WOOD: 545
+        CLAY: 700
+        IRON: 545
+        CROP: 155
+
+    - level: 6
+      production_per_hour: 70
+      construction_time_seconds: 4730
+      cost:
+        WOOD: 910
+        CLAY: 1170
+        IRON: 910
+        CROP: 260
+
+    - level: 7
+      production_per_hour: 98
+      construction_time_seconds: 7780
+      cost:
+        WOOD: 1520
+        CLAY: 1950
+        IRON: 1520
+        CROP: 435
+
+    - level: 8
+      production_per_hour: 140
+      construction_time_seconds: 12640
+      cost:
+        WOOD: 2535
+        CLAY: 3260
+        IRON: 2535
+        CROP: 725
+
+    - level: 9
+      production_per_hour: 203
+      construction_time_seconds: 20430
+      cost:
+        WOOD: 4235
+        CLAY: 5445
+        IRON: 4235
+        CROP: 1210
+
+    - level: 10
+      production_per_hour: 280
+      construction_time_seconds: 32880
+      cost:
+        WOOD: 7070
+        CLAY: 9095
+        IRON: 7070
+        CROP: 2020
 
 buildings:
   - name: "Main Building"
