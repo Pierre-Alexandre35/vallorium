@@ -1,21 +1,11 @@
-import AccessTimeRoundedIcon from "@mui/icons-material/AccessTimeRounded";
-import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
-import ConstructionRoundedIcon from "@mui/icons-material/ConstructionRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
-import {
-  Box,
-  Button,
-  Chip,
-  Divider,
-  LinearProgress,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Box, Chip, Stack, Typography } from "@mui/material";
 
 import { GamePanel } from "@/components/ui/game-panel";
 import { IconTile } from "@/components/ui/icon-tile";
 import { ResourceIcon } from "@/features/villages/components/resources/resource-icon";
+import { VillageBuildQueue } from "@/features/villages/components/construction/village-build-queue";
 import {
   resourceKeys,
   resourceMeta,
@@ -65,61 +55,7 @@ export function VillageStatusPanel({ village }: { village: VillageRow }) {
         </Stack>
       </GamePanel>
 
-      <GamePanel sx={{ p: 2.25 }}>
-        <Stack direction="row" spacing={1.2} alignItems="center">
-          <IconTile
-            color={gameTokens.colors.brand.amberDark}
-            backgroundColor={gameTokens.colors.brand.amberLight}
-          >
-            <ConstructionRoundedIcon />
-          </IconTile>
-          <Box flex={1}>
-            <Typography variant="h6">Build queue</Typography>
-            <Typography variant="body2" color="text.secondary">
-              1 construction active
-            </Typography>
-          </Box>
-        </Stack>
-        <Divider sx={{ my: 1.75 }} />
-        <Typography fontWeight={gameTokens.typography.weight.heavy}>
-          Iron mine · Level 7
-        </Typography>
-        <Stack
-          direction="row"
-          alignItems="center"
-          spacing={0.7}
-          sx={{ mt: 0.65 }}
-        >
-          <AccessTimeRoundedIcon
-            sx={{ fontSize: 17, color: "text.secondary" }}
-          />
-          <Typography variant="body2" color="text.secondary">
-            Finishes in 04:13
-          </Typography>
-        </Stack>
-        <LinearProgress
-          variant="determinate"
-          value={72}
-          sx={{
-            mt: 1.5,
-            height: 7,
-            borderRadius: gameTokens.radius.pill,
-            bgcolor: "secondary.light",
-            "& .MuiLinearProgress-bar": {
-              bgcolor: "secondary.main",
-              borderRadius: gameTokens.radius.pill,
-            },
-          }}
-        />
-        <Button
-          fullWidth
-          variant="outlined"
-          endIcon={<ArrowForwardRoundedIcon />}
-          sx={{ mt: 1.75 }}
-        >
-          Open construction
-        </Button>
-      </GamePanel>
+      <VillageBuildQueue villageId={village.id} />
 
       <GamePanel sx={{ p: 2.25 }}>
         <Stack
