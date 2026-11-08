@@ -1,12 +1,4 @@
-import AddRoundedIcon from "@mui/icons-material/AddRounded";
-import {
-  Box,
-  IconButton,
-  LinearProgress,
-  Stack,
-  Tooltip,
-  Typography,
-} from "@mui/material";
+import { Box, LinearProgress, Stack, Typography } from "@mui/material";
 
 import { GamePanel } from "@/components/ui/game-panel";
 import { ResourceIcon } from "@/features/villages/components/resources/resource-icon";
@@ -51,7 +43,7 @@ export function ResourceBar({ village }: { village: VillageRow }) {
               minWidth: 0,
               p: 1,
               display: "grid",
-              gridTemplateColumns: "auto minmax(0, 1fr) auto",
+              gridTemplateColumns: "auto minmax(0, 1fr)",
               alignItems: "center",
               gap: 1,
               borderRadius: 2.5,
@@ -97,18 +89,6 @@ export function ResourceBar({ village }: { village: VillageRow }) {
                 +{formatAmount(village.production[resource] ?? 0)}/h
               </Typography>
             </Box>
-            <Tooltip title={`Buy more ${meta.label.toLowerCase()}`}>
-              <IconButton
-                size="small"
-                sx={{
-                  width: 28,
-                  height: 28,
-                  bgcolor: gameTokens.colors.overlay.black035,
-                }}
-              >
-                <AddRoundedIcon sx={{ fontSize: 17 }} />
-              </IconButton>
-            </Tooltip>
           </Box>
         );
       })}

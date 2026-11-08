@@ -9,7 +9,9 @@ import ConstructionRoundedIcon from "@mui/icons-material/ConstructionRounded";
 import { Box, Button, Chip, Divider, Stack, Typography } from "@mui/material";
 
 import { GamePanel } from "@/components/ui/game-panel";
+import { FieldLayoutRing } from "@/features/world-map/components/field-layout-ring";
 import {
+  isSettleable,
   RESOURCE_LAYOUT_VALUES,
   type TerrainType,
   type WorldMapTile,
@@ -27,6 +29,7 @@ const terrainLabels: Record<TerrainType, string> = {
 
 type TileDetailsPanelProps = {
   tile: WorldMapTile | null;
+  playerTile: WorldMapTile | null;
   onCenter: (tile: WorldMapTile) => void;
   onOpenVillage: () => void;
 };
@@ -60,6 +63,7 @@ function ResourceAmount({
 
 export function TileDetailsPanel({
   tile,
+  playerTile,
   onCenter,
   onOpenVillage,
 }: TileDetailsPanelProps) {
@@ -79,7 +83,10 @@ export function TileDetailsPanel({
   }
 
   const layout = RESOURCE_LAYOUT_VALUES[tile.resourceLayout];
-  const isBlocked = tile.terrain === "lake" || tile.terrain === "mountain";
+  const isBlocked = !isSettleable(tile);
+  const distance = playerTile
+    ? Math.hypot(tile.x - playerTile.x, tile.y - playerTile.y)
+    : null;
 
   return (
     <GamePanel sx={{ overflow: "hidden" }}>
@@ -144,6 +151,24 @@ export function TileDetailsPanel({
               color={tile.resourceLayout === "1-1-1-15" ? "warning" : "default"}
             />
           </Stack>
+
+          {distance !== null && distance > 0 ? (
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+            >
+              <Typography variant="body2" color="text.secondary">
+                Distance from your village
+              </Typography>
+              <Typography
+                variant="body2"
+                fontWeight={gameTokens.typography.weight.bold}
+              >
+                {distance.toFixed(1)} tiles
+              </Typography>
+            </Stack>
+          ) : null}
         </Stack>
 
         <Divider sx={{ my: 2 }} />
@@ -151,9 +176,12 @@ export function TileDetailsPanel({
         <Typography variant="subtitle2" sx={{ mb: 1.25 }}>
           Resource fields
         </Typography>
+        <Box sx={{ display: "grid", placeItems: "center", mb: 1.5 }}>
+          <FieldLayoutRing layout={tile.resourceLayout} />
+        </Box>
         <Stack spacing={1.1}>
           <ResourceAmount
-            label="Wood"
+            label="Lumber"
             amount={layout.wood}
             icon={<ParkRoundedIcon fontSize="small" />}
             color={gameTokens.colors.resource.wood}

@@ -1,5 +1,4 @@
 import ArrowUpwardRoundedIcon from "@mui/icons-material/ArrowUpwardRounded";
-import CastleRoundedIcon from "@mui/icons-material/CastleRounded";
 import ConstructionRoundedIcon from "@mui/icons-material/ConstructionRounded";
 import { Alert, Box, Button, Snackbar, Stack, Typography } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,12 +21,7 @@ import type {
   ActiveFarmUpgrade,
   ResourceKey,
 } from "@/features/villages/types/village";
-import {
-  gameShadows,
-  gameTokens,
-  gameVisuals,
-  type GameCssProperties,
-} from "@/theme";
+import { gameShadows, gameTokens, type GameCssProperties } from "@/theme";
 
 interface VillageFieldMapProps {
   villageId: number;
@@ -45,29 +39,18 @@ interface FieldPlot {
 }
 
 const mapVariables: GameCssProperties = {
-  "--village-map-max-width": `${gameTokens.layout.villageMapMaxWidth}px`,
-  "--village-map-border": gameVisuals.village.mapBorder,
-  "--village-map-shadow": gameShadows.villageMap,
-  "--village-center-color": gameTokens.colors.text.villageCenter,
-  "--village-center-background": gameVisuals.village.centerBackground,
-  "--village-center-border": gameTokens.colors.border.villageCenter,
-  "--village-center-shadow": gameShadows.villageCenter,
+  "--village-selection-stroke": gameTokens.colors.brand.forest,
   "--village-selection-border": gameTokens.colors.border.default,
   "--village-selection-background": gameTokens.colors.overlay.paper94,
   "--village-selection-shadow": gameShadows.villageSelection,
-  "--farm-map-ground": gameTokens.colors.map.terrainGround,
-  "--farm-map-road": gameVisuals.village.roadBackground,
-  "--farm-map-road-border": gameVisuals.village.roadBorder,
-  "--farm-center-ground-light": gameTokens.colors.map.centerGroundLight,
-  "--farm-center-ground": gameTokens.colors.map.centerGround,
-  "--farm-center-ground-dark": gameTokens.colors.map.centerGroundDark,
+  "--farm-map-ground": gameTokens.colors.villageMap.ground,
   "--farm-marker-surface": gameTokens.colors.surface.paper,
   "--farm-marker-text": gameTokens.colors.text.primary,
   "--game-motion-quick": gameTokens.motion.quick,
   "--village-construction-background":
     gameTokens.colors.construction.background,
   "--village-construction-border": gameTokens.colors.construction.border,
-  "--village-construction-icon": gameTokens.colors.construction.icon,
+  "--village-construction-accent": gameTokens.colors.construction.accent,
   "--village-construction-text": gameTokens.colors.construction.text,
 };
 
@@ -204,40 +187,26 @@ export function VillageFieldMap({ villageId }: VillageFieldMapProps) {
   return (
     <GamePanel className={styles.mapPanel} style={mapVariables}>
       <Box className={styles.world}>
-        <FarmTerrain
-          plots={plots}
-          selectedFarmNumber={selected.farmNumber}
-          onSelectFarm={setSelectedFarmNumber}
-        />
-
-        {plots.map((plot) => (
-          <FarmPlotButton
-            key={plot.id}
-            resource={plot.resource}
-            level={plot.level}
-            left={plot.left}
-            top={plot.top}
-            selected={selected.farmNumber === plot.farmNumber}
-            upgrading={plot.upgrading}
-            targetLevel={plot.activeUpgrade?.target_level}
-            onSelect={() => setSelectedFarmNumber(plot.farmNumber)}
+        <Box className={styles.ring}>
+          <FarmTerrain
+            plots={plots}
+            selectedFarmNumber={selected.farmNumber}
+            onSelectFarm={setSelectedFarmNumber}
           />
-        ))}
 
-        <Box className={styles.villageCenter}>
-          <Box>
-            <CastleRoundedIcon sx={{ fontSize: { xs: 42, sm: 54 } }} />
-            <Typography
-              sx={{
-                fontSize: { xs: 9, sm: 11 },
-                fontWeight: gameTokens.typography.weight.black,
-                textTransform: "uppercase",
-                letterSpacing: gameTokens.typography.tracking.label,
-              }}
-            >
-              Village center
-            </Typography>
-          </Box>
+          {plots.map((plot) => (
+            <FarmPlotButton
+              key={plot.id}
+              resource={plot.resource}
+              level={plot.level}
+              left={plot.left}
+              top={plot.top}
+              selected={selected.farmNumber === plot.farmNumber}
+              upgrading={plot.upgrading}
+              targetLevel={plot.activeUpgrade?.target_level}
+              onSelect={() => setSelectedFarmNumber(plot.farmNumber)}
+            />
+          ))}
         </Box>
       </Box>
 
