@@ -46,6 +46,7 @@ jobs:
       - name: Build frontend
         working-directory: ${{ env.FRONTEND_DIR }}
         env:
+          VITE_API_BASE_URL: /api/v1
           VITE_APP_VERSION: ${{ inputs.release_version }}
           VITE_COMMIT_SHA: ${{ inputs.commit_sha }}
         run: npm run build
