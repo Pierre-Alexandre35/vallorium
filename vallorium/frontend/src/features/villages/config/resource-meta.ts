@@ -12,6 +12,7 @@ interface ResourceTerrainPalette {
   light: string;
   base: string;
   dark: string;
+  detail: string;
 }
 
 interface ResourceMeta {
@@ -35,43 +36,27 @@ export const resourceMeta: Record<ResourceKey, ResourceMeta> = {
     color: gameTokens.colors.resource.wood,
     light: gameTokens.colors.resource.woodLight,
     Icon: ParkRoundedIcon,
-    terrain: {
-      light: gameTokens.colors.map.forestLight,
-      base: gameTokens.colors.map.forest,
-      dark: gameTokens.colors.map.forestDark,
-    },
+    terrain: gameTokens.colors.villageMap.fields.wood,
   },
   clay: {
     label: "Clay",
     color: gameTokens.colors.resource.clay,
     light: gameTokens.colors.resource.clayLight,
     Icon: LandscapeRoundedIcon,
-    terrain: {
-      light: gameTokens.colors.map.clayLight,
-      base: gameTokens.colors.map.clay,
-      dark: gameTokens.colors.map.clayDark,
-    },
+    terrain: gameTokens.colors.villageMap.fields.clay,
   },
   iron: {
     label: "Iron",
     color: gameTokens.colors.resource.iron,
     light: gameTokens.colors.resource.ironLight,
     Icon: ConstructionRoundedIcon,
-    terrain: {
-      light: gameTokens.colors.map.ironLight,
-      base: gameTokens.colors.map.iron,
-      dark: gameTokens.colors.map.ironDark,
-    },
+    terrain: gameTokens.colors.villageMap.fields.iron,
   },
   crop: {
     label: "Crop",
     color: gameTokens.colors.resource.crop,
     light: gameTokens.colors.resource.cropLight,
     Icon: GrassRoundedIcon,
-    terrain: {
-      light: gameTokens.colors.map.meadowAlt,
-      base: gameTokens.colors.map.meadow,
-      dark: gameTokens.colors.map.cropDark,
-    },
+    terrain: gameTokens.colors.villageMap.fields.crop,
   },
 };

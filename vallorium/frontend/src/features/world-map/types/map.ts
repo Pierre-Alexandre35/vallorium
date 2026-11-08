@@ -37,6 +37,10 @@ export type WorldMapResponse = {
   tiles: WorldMapTile[];
 };
 
+export function isSettleable(tile: Pick<WorldMapTile, "terrain">): boolean {
+  return tile.terrain !== "lake" && tile.terrain !== "mountain";
+}
+
 export const RESOURCE_LAYOUT_VALUES: Record<
   ResourceLayoutCode,
   { wood: number; clay: number; iron: number; crop: number }

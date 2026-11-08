@@ -1,5 +1,4 @@
 import ConstructionRoundedIcon from "@mui/icons-material/ConstructionRounded";
-import { Box } from "@mui/material";
 
 import styles from "@/features/villages/components/fields/farm-plot-button.module.css";
 import { resourceMeta } from "@/features/villages/config/resource-meta";
@@ -27,39 +26,27 @@ export function FarmPlotButton({
   targetLevel,
   onSelect,
 }: FarmPlotButtonProps) {
-  const meta = resourceMeta[resource];
-  const Icon = meta.Icon;
-
-  const style = {
-    "--farm-left": left,
-    "--farm-top": top,
-    "--farm-color": meta.color,
-  } as GameCssProperties;
+  const style: GameCssProperties = { "--farm-left": left, "--farm-top": top };
+  const upgradeLabel = upgrading
+    ? `, upgrading to level ${targetLevel ?? level + 1}`
+    : "";
 
   return (
-    <Box
-      component="button"
+    <button
       type="button"
       className={styles.plot}
       data-selected={selected}
-      data-upgrading={upgrading}
       aria-pressed={selected}
-      aria-label={
-        `${meta.label} field, level ${level}` +
-        (upgrading ? `, upgrading to level ${targetLevel ?? level + 1}` : "")
-      }
+      aria-label={`${resourceMeta[resource].label} field, level ${level}${upgradeLabel}`}
       onClick={onSelect}
       style={style}
     >
-      <Box className={styles.iconSurface} aria-hidden="true">
-        <Icon className={styles.icon} />
-      </Box>
-      <Box className={styles.levelBadge}>{level}</Box>
+      <span className={styles.level}>{level}</span>
       {upgrading && (
-        <Box className={styles.constructionBadge} aria-hidden="true">
+        <span className={styles.constructionBadge} aria-hidden="true">
           <ConstructionRoundedIcon sx={{ fontSize: 12 }} />
-        </Box>
+        </span>
       )}
-    </Box>
+    </button>
   );
 }

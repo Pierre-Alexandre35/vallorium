@@ -10,12 +10,6 @@ export const gameVisuals = {
     fieldBorder: "rgba(255,255,255,.55)",
     centerBackground: "#ead69b",
   },
-  village: {
-    centerBackground: "linear-gradient(145deg, #f6e6ae, #d5ba74)",
-    mapBorder: "rgba(76, 93, 56, .18)",
-    roadBorder: "rgba(124, 91, 47, .58)",
-    roadBackground: "rgba(222, 202, 145, .72)",
-  },
   noiseDataUri:
     "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E\")",
 } as const;

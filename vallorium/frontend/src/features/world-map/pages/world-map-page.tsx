@@ -211,6 +211,7 @@ export function WorldMapPage() {
         <Stack spacing={2}>
           <TileDetailsPanel
             tile={selectedTile}
+            playerTile={playerTile}
             onCenter={(tile) => canvasRef.current?.centerOn(tile.x, tile.y)}
             onOpenVillage={() => navigate("/app")}
           />
