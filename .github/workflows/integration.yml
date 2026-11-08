@@ -71,5 +71,8 @@ jobs:
       - name: Prettier
         run: npm run format:check
 
+      - name: API configuration tests
+        run: npm run test:api-config
+
       - name: Build
         run: npm run build
