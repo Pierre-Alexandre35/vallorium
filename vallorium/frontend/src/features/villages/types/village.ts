@@ -67,6 +67,7 @@ export type VillageFarm = {
   };
   /** The backend must return this field for refresh-safe construction state. */
   active_upgrade?: ActiveFarmUpgrade | null;
+  next_level_production: number | null;
 };
 
 export type FarmUpgrade = {

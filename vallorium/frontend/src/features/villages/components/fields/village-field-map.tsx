@@ -32,6 +32,7 @@ interface FieldPlot {
   farmNumber: number;
   resource: ResourceKey;
   level: number;
+  nextLevelProduction: number | null;
   activeUpgrade: ActiveFarmUpgrade | null;
   upgrading: boolean;
   left: string;
@@ -148,6 +149,7 @@ export function VillageFieldMap({ villageId }: VillageFieldMapProps) {
         farmNumber: farm.farm_number,
         resource,
         level: farm.level,
+        nextLevelProduction: farm.next_level_production,
         activeUpgrade: farm.active_upgrade ?? null,
         upgrading: farm.active_upgrade != null,
         ...getFarmFieldPosition(layoutSlot),
@@ -233,7 +235,7 @@ export function VillageFieldMap({ villageId }: VillageFieldMapProps) {
                   : remainingTime
                     ? `Construction · ${remainingTime} remaining`
                     : "Construction in progress"
-                : `Next level adds +${selected.level * 8 + 34}/h production`}
+                : `Next level adds +${selected.nextLevelProduction}`}
             </Typography>
           </Box>
         </Stack>

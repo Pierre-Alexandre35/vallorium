@@ -667,6 +667,7 @@ def get_village_farms(
                 if upgrade is not None
                 else None
             ),
+            next_level_production=next_level_prod,
         )
-        for farm, upgrade in farm_rows
+        for farm, upgrade, next_level_prod in farm_rows
     ]

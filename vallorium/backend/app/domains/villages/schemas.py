@@ -83,3 +83,4 @@ class VillageFarmOut(AppBaseModel):
     level: int
     resource_type: ResourceTypeOut
     active_upgrade: ActiveFarmUpgradeOut | None = None
+    next_level_production: int | None = None
