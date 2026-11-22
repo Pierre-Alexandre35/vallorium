@@ -1,13 +1,44 @@
 Run the focused tests from `vallorium/backend`:
 
 ```sh
-.venv/bin/python -m unittest discover -s tests -v
+poetry run python -m unittest discover -s tests -v
 ```
 
 PostgreSQL concurrency tests are skipped unless `TEST_DATABASE_URL` names a
 **dedicated PostgreSQL test database**. They create and drop only a randomly
 named schema. They exercise worker/request races and simultaneous spending
 using separate database sessions. They do not use the legacy pytest fixtures.
+
+## Performance budgets
+
+`test_performance_budgets.py` checks, for every GET endpoint under `/api/v1`,
+how many SQL queries one request runs and how large the response is. It builds
+a realistic world from the real seed reference data plus a real signup, in a
+throwaway schema. It runs in CI on every push and PR.
+
+It fails when:
+
+- an endpoint runs more queries, or returns more KB, than its budget. The
+  failure message lists every SQL statement, so an N+1 query is easy to spot;
+- a new GET endpoint has no budget. Add it to `BUDGETS`, or to `EXEMPT` with a
+  reason.
+
+If the extra cost is intended, raise the budget in the same PR so it is visible
+in review. The summary printed after the run shows `↓ budget can be lowered`
+when an endpoint got cheaper; lower it to lock the gain in.
+
+Run it locally against the docker-compose Postgres (one-time:
+`docker compose exec postgres psql -U pierre -d pierre -c "CREATE DATABASE vallorium_test"`):
+
+```sh
+export TEST_DATABASE_URL=postgresql+psycopg://pierre:password@localhost:5432/vallorium_test
+export DATABASE_URL=$TEST_DATABASE_URL REDIS_URL=redis://localhost:6379/0
+poetry run python -m unittest discover -s tests -v
+```
+
+For wall-clock latency against a running backend, use `perf/bench.py`
+(`poetry run python -m perf.bench --help`). It is a local tool; timings are
+not gated in CI because shared runners are too noisy.
 
 ## Deployment
 
