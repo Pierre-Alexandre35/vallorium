@@ -42,3 +42,7 @@ variable "service_account_email" {
   description = "Runtime service account attached to the PostgreSQL VM"
   type        = string
 }
+variable "client_cidr" {
+  description = "CIDR allowed to reach PostgreSQL (firewall and pg_hba.conf)"
+  type        = string
+}

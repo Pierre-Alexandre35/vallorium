@@ -8,8 +8,9 @@ module "postgres" {
   name         = var.postgres_name
   machine_type = var.postgres_machine_type
 
-  subnetwork = google_compute_subnetwork.backend.id
-  network    = google_compute_network.backend.id
+  subnetwork  = google_compute_subnetwork.backend.id
+  network     = google_compute_network.backend.id
+  client_cidr = var.vpc_subnet_cidr
 
   data_disk_size_gb = var.postgres_data_disk_size_gb
 

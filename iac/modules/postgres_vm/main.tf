@@ -39,13 +39,19 @@ resource "google_compute_instance" "postgres" {
     # PostgreSQL receives no public IP.
   }
 
-  metadata_startup_script = templatefile(
-    "${path.module}/startup.sh",
-    {
-      database_name = var.database_name
-      database_user = var.database_user
-    }
-  )
+  # `metadata.startup-script` (not `metadata_startup_script`) so that script
+  # changes update the VM in place instead of recreating it. The script runs
+  # on every boot and is idempotent.
+  metadata = {
+    startup-script = templatefile(
+      "${path.module}/startup.sh",
+      {
+        database_name = var.database_name
+        database_user = var.database_user
+        client_cidr   = var.client_cidr
+      }
+    )
+  }
 
   service_account {
     email  = var.service_account_email
@@ -70,7 +76,7 @@ resource "google_compute_firewall" "postgres" {
   }
 
   source_ranges = [
-    "10.20.0.0/24"
+    var.client_cidr
   ]
 
   target_tags = ["postgres"]
