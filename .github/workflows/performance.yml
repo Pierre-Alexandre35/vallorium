@@ -1,0 +1,145 @@
+name: Performance
+
+# API latency, measured in-process against a seeded Postgres.
+# - Pull requests: times the base branch and the PR on the same runner and
+#   comments a comparison. Warns only; query/payload budgets are the hard gate
+#   (Backend tests job in integration.yml).
+# - Pushes to dev/main: records the numbers on the gh-pages branch, which
+#   renders a latency-over-time chart per branch.
+
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - "vallorium/backend/**"
+      - ".github/workflows/performance.yml"
+  push:
+    branches: [dev, main]
+    paths:
+      - "vallorium/backend/**"
+      - ".github/workflows/performance.yml"
+
+concurrency:
+  group: performance-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  latency:
+    name: API latency
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write # push results to gh-pages
+      pull-requests: write # sticky PR comment
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: vallorium
+          POSTGRES_PASSWORD: vallorium
+          POSTGRES_DB: vallorium_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U vallorium -d vallorium_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://vallorium:vallorium@localhost:5432/vallorium_test
+      DATABASE_URL: postgresql+psycopg://vallorium:vallorium@localhost:5432/vallorium_test
+      REDIS_URL: redis://localhost:6379/0
+      ROUNDS: "3"
+      RESULTS: /tmp/perf-results # outside the repo, so git operations ignore it
+
+    steps:
+      # The PR is checked out at the workspace root (github-action-benchmark
+      # needs the repository there); the base branch goes in a subfolder.
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Checkout base branch
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: .perf-base
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        run: python -m pip install poetry
+
+      - name: Install dependencies
+        working-directory: vallorium/backend
+        run: poetry install --no-interaction --no-root
+
+      - name: Measure latency
+        working-directory: vallorium/backend
+        run: |
+          mkdir -p "$RESULTS"
+          base_app="$GITHUB_WORKSPACE/.perf-base/vallorium/backend"
+          base_ok=0
+          if [ -d "$base_app" ]; then base_ok=1; fi
+          # Alternate base and head so drift on the runner hits both equally.
+          for i in $(seq "$ROUNDS"); do
+            if [ "$base_ok" = 1 ]; then
+              poetry run python perf/latency.py --app-root "$base_app" \
+                --output "$RESULTS/base-$i.json" \
+                || { echo "::warning::Base branch could not be measured; reporting PR only."; base_ok=0; }
+            fi
+            poetry run python perf/latency.py --output "$RESULTS/head-$i.json"
+          done
+
+      - name: Build report
+        working-directory: vallorium/backend
+        run: |
+          shopt -s nullglob
+          poetry run python perf/compare.py \
+            --base "$RESULTS"/base-*.json \
+            --head "$RESULTS"/head-*.json \
+            --output "$RESULTS/report.md" \
+            --json-output "$RESULTS/merged.json" \
+            --context "Base \`${{ github.event.pull_request.base.ref || github.ref_name }}\`, ${ROUNDS} rounds × 200 requests."
+          cat "$RESULTS/report.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment on pull request
+        # Fork PRs get a read-only token; they still have the job summary.
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: perf-report
+          path: ${{ env.RESULTS }}/report.md
+
+      - name: Create gh-pages branch if missing
+        if: github.event_name == 'push'
+        run: |
+          if ! git ls-remote --exit-code --heads origin gh-pages >/dev/null; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git switch --orphan gh-pages
+            git commit --allow-empty -m "Initialize gh-pages for performance history"
+            git push origin gh-pages
+            git switch -
+          fi
+
+      - name: Record history
+        if: github.event_name == 'push'
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: API latency (${{ github.ref_name }})
+          tool: customSmallerIsBetter
+          output-file-path: ${{ env.RESULTS }}/merged.json
+          gh-pages-branch: gh-pages
+          benchmark-data-dir-path: perf/${{ github.ref_name }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          alert-threshold: "150%"
+          comment-on-alert: false
+          fail-on-alert: false
