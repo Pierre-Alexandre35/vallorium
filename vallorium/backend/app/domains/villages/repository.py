@@ -560,7 +560,9 @@ def get_farm_plots_with_active_upgrades_for_village(
 ) -> list[
     tuple[
         db.VillageFarmPlot,
-        db.VillageFarmUpgrade | int | None,
+        db.VillageFarmUpgrade | None,
+        db.FarmLevelCost,
+        int | None,
     ]
 ]:
     """Load farm plots after the service has already authorized the village."""
@@ -583,8 +585,16 @@ def get_farm_plots_with_active_upgrades_for_village(
                 db.FarmLevel.level == db.VillageFarmPlot.level + 1,
             ),
         )
+        .outerjoin(
+            db.FarmLevelCost,
+            and_(
+                db.FarmLevelCost.farm_resource_type_id
+                == db.VillageFarmPlot.resource_type_id,
+                db.FarmLevelCost.level == db.VillageFarmPlot.level + 1,
+            ),
+        )
         .options(
-            joinedload(db.VillageFarmPlot.resource_type),
+            joinedload(db.FarmLevel.resource_type),
         )
         .filter(db.VillageFarmPlot.village_id == village_id)
         .order_by(db.VillageFarmPlot.farm_number)

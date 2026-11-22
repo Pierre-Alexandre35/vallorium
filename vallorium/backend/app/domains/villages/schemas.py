@@ -7,6 +7,7 @@ from app.common.schemas import AppBaseModel
 from app.domains.map.schemas import MapTileOut
 from app.domains.resources.schemas import (
     ResourceBalance,
+    ResourceCost,
     ResourceProduction,
     ResourceTypeOut,
 )
@@ -77,10 +78,17 @@ class ActiveFarmUpgradeOut(AppBaseModel):
     completes_at: datetime
 
 
+class NextFarmLevelOut(AppBaseModel):
+    level: int
+    production_per_hour: int
+    construction_time_seconds: int
+    costs: list[ResourceCost] = Field(default_factory=list)
+
+
 class VillageFarmOut(AppBaseModel):
     id: int
     farm_number: int
     level: int
     resource_type: ResourceTypeOut
     active_upgrade: ActiveFarmUpgradeOut | None = None
-    next_level_production: int | None = None
+    next_level: NextFarmLevelOut | None = None  # None = max level
