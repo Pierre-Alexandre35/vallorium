@@ -14,11 +14,16 @@ import { FarmPlotButton } from "@/features/villages/components/fields/farm-plot-
 import { FarmTerrain } from "@/features/villages/components/fields/farm-terrain";
 import styles from "@/features/villages/components/fields/village-field-map.module.css";
 import { ResourceIcon } from "@/features/villages/components/resources/resource-icon";
-import { resourceMeta } from "@/features/villages/config/resource-meta";
+import { UpgradeCost } from "@/features/villages/components/fields/upgrade-cost";
+import {
+  resourceMeta,
+  toResourceKey,
+} from "@/features/villages/config/resource-meta";
 import { useVillageFarms } from "@/features/villages/hooks/use-village-farms";
 import { useUpgradeFarm } from "@/features/villages/hooks/use-upgrade-farm";
 import type {
   ActiveFarmUpgrade,
+  NextFarmLevel,
   ResourceKey,
 } from "@/features/villages/types/village";
 import { gameShadows, gameTokens, type GameCssProperties } from "@/theme";
@@ -32,7 +37,8 @@ interface FieldPlot {
   farmNumber: number;
   resource: ResourceKey;
   level: number;
-  nextLevelProduction: number | null;
+  /** null when the field is at max level. */
+  nextLevel: NextFarmLevel | null;
   activeUpgrade: ActiveFarmUpgrade | null;
   upgrading: boolean;
   left: string;
@@ -54,14 +60,6 @@ const mapVariables: GameCssProperties = {
   "--village-construction-accent": gameTokens.colors.construction.accent,
   "--village-construction-text": gameTokens.colors.construction.text,
 };
-
-function toResourceKey(resourceName: string): ResourceKey | null {
-  const normalizedName = resourceName.toLowerCase();
-
-  return normalizedName in resourceMeta
-    ? (normalizedName as ResourceKey)
-    : null;
-}
 
 function upgradeErrorMessage(error: unknown): string {
   if (isAxiosError(error)) {
@@ -149,7 +147,7 @@ export function VillageFieldMap({ villageId }: VillageFieldMapProps) {
         farmNumber: farm.farm_number,
         resource,
         level: farm.level,
-        nextLevelProduction: farm.next_level_production,
+        nextLevel: farm.next_level,
         activeUpgrade: farm.active_upgrade ?? null,
         upgrading: farm.active_upgrade != null,
         ...getFarmFieldPosition(layoutSlot),
@@ -235,8 +233,13 @@ export function VillageFieldMap({ villageId }: VillageFieldMapProps) {
                   : remainingTime
                     ? `Construction · ${remainingTime} remaining`
                     : "Construction in progress"
-                : `Next level adds +${selected.nextLevelProduction}`}
+                : selected.nextLevel
+                  ? `Next level adds +${selected.nextLevel.production_per_hour}`
+                  : "Max level reached"}
             </Typography>
+            {!selectedUpgrade && selected.nextLevel ? (
+              <UpgradeCost costs={selected.nextLevel.costs} />
+            ) : null}
           </Box>
         </Stack>
 
@@ -250,14 +253,20 @@ export function VillageFieldMap({ villageId }: VillageFieldMapProps) {
               <ArrowUpwardRoundedIcon />
             )
           }
-          disabled={Boolean(selectedUpgrade) || upgradeFarmMutation.isPending}
+          disabled={
+            Boolean(selectedUpgrade) ||
+            !selected.nextLevel ||
+            upgradeFarmMutation.isPending
+          }
           onClick={() => upgradeFarmMutation.mutate(selected.id)}
         >
           {selectedUpgrade
             ? `Upgrading to ${selectedUpgrade.target_level}`
             : isStartingSelected
               ? "Starting…"
-              : `Upgrade to ${selected.level + 1}`}
+              : selected.nextLevel
+                ? `Upgrade to ${selected.nextLevel.level}`
+                : "Max level"}
         </Button>
       </Stack>
       <Snackbar

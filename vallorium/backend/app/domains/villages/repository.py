@@ -560,14 +560,17 @@ def get_farm_plots_with_active_upgrades_for_village(
 ) -> list[
     tuple[
         db.VillageFarmPlot,
-        db.VillageFarmUpgrade | int | None,
+        db.VillageFarmUpgrade | None,
+        db.FarmLevel | None,
     ]
 ]:
-    """Load farm plots after the service has already authorized the village."""
+    """Load farm plots with their active upgrade and next level (None at max level).
+
+    Load the next level's costs in one batched query (selectinload) instead of one
+    query per farm.
+    """
     return (
-        db_sess.query(
-            db.VillageFarmPlot, db.VillageFarmUpgrade, db.FarmLevel.production_per_hour
-        )
+        db_sess.query(db.VillageFarmPlot, db.VillageFarmUpgrade, db.FarmLevel)
         .outerjoin(
             db.VillageFarmUpgrade,
             and_(
@@ -585,6 +588,9 @@ def get_farm_plots_with_active_upgrades_for_village(
         )
         .options(
             joinedload(db.VillageFarmPlot.resource_type),
+            selectinload(db.FarmLevel.costs).joinedload(
+                db.FarmLevelCost.payment_resource_type
+            ),
         )
         .filter(db.VillageFarmPlot.village_id == village_id)
         .order_by(db.VillageFarmPlot.farm_number)

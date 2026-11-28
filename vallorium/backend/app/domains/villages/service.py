@@ -8,11 +8,16 @@ from sqlalchemy.orm import Session
 import app.domains.resources.repository as resource_repo
 import app.domains.resources.service as resource_service
 import app.domains.villages.repository as village_repo
-from app.db.models import MapTile, Resource, UpgradeStatus, Village
-from app.domains.resources.schemas import ResourceBalance, ResourceProduction
+from app.db.models import FarmLevel, MapTile, Resource, UpgradeStatus, Village
+from app.domains.resources.schemas import (
+    ResourceBalance,
+    ResourceCost,
+    ResourceProduction,
+)
 from app.domains.villages.schemas import (
     ActiveFarmUpgradeOut,
     FarmUpgradeOut,
+    NextFarmLevelOut,
     ResourceTypeOut,
     VillageCreate,
     VillageFarmOut,
@@ -667,7 +672,31 @@ def get_village_farms(
                 if upgrade is not None
                 else None
             ),
-            next_level_production=next_level_prod,
+            next_level=_to_next_farm_level_out(next_level),
         )
-        for farm, upgrade, next_level_prod in farm_rows
+        for farm, upgrade, next_level in farm_rows
     ]
+
+
+def _to_next_farm_level_out(
+    next_level: FarmLevel | None,
+) -> NextFarmLevelOut | None:
+    """Map the next level's reference row; None means the farm is at max level."""
+    if next_level is None:
+        return None
+
+    return NextFarmLevelOut(
+        level=next_level.level,
+        production_per_hour=next_level.production_per_hour,
+        construction_time_seconds=next_level.construction_time_seconds,
+        costs=[
+            ResourceCost(
+                resource_id=cost.payment_resource_type_id,
+                resource_type=cost.payment_resource_type.name,
+                amount=cost.amount,
+            )
+            for cost in sorted(
+                next_level.costs, key=lambda cost: cost.payment_resource_type_id
+            )
+        ],
+    )

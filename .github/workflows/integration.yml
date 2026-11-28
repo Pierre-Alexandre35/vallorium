@@ -43,6 +43,53 @@ jobs:
       - name: Ruff format check
         run: poetry run ruff format --check .
 
+  backend-tests:
+    name: Backend tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: vallorium/backend
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: vallorium
+          POSTGRES_PASSWORD: vallorium
+          POSTGRES_DB: vallorium_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U vallorium -d vallorium_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      # Dedicated throwaway database; each test creates and drops its own schema.
+      TEST_DATABASE_URL: postgresql+psycopg://vallorium:vallorium@localhost:5432/vallorium_test
+      DATABASE_URL: postgresql+psycopg://vallorium:vallorium@localhost:5432/vallorium_test
+      # Required at import time only; the tests never connect to Redis.
+      REDIS_URL: redis://localhost:6379/0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        run: python -m pip install poetry
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-root
+
+      - name: Unit, concurrency and performance budget tests
+        run: poetry run python -m unittest discover -s tests -v
+
   frontend:
     name: Frontend checks
     runs-on: ubuntu-latest

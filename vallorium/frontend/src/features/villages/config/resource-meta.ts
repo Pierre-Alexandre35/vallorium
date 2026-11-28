@@ -60,3 +60,11 @@ export const resourceMeta: Record<ResourceKey, ResourceMeta> = {
     terrain: gameTokens.colors.villageMap.fields.crop,
   },
 };
+
+/** Map an API resource name ("Wood", "CROP", …) to its key, or null if unknown. */
+export function toResourceKey(resourceName: string): ResourceKey | null {
+  const normalizedName = resourceName.toLowerCase();
+  return normalizedName in resourceMeta
+    ? (normalizedName as ResourceKey)
+    : null;
+}
