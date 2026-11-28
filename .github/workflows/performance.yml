@@ -123,10 +123,12 @@ jobs:
           if ! git ls-remote --exit-code --heads origin gh-pages >/dev/null; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git switch --orphan gh-pages
-            git commit --allow-empty -m "Initialize gh-pages for performance history"
-            git push origin gh-pages
-            git switch -
+            # Push an empty root commit without touching the checked-out tree
+            # (the checkout may be a detached HEAD, so there is nothing to
+            # switch back to).
+            empty_tree=$(git hash-object -t tree /dev/null)
+            commit=$(git commit-tree "$empty_tree" -m "Initialize gh-pages for performance history")
+            git push origin "$commit:refs/heads/gh-pages"
           fi
 
       - name: Record history
