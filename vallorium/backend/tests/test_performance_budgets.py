@@ -37,7 +37,8 @@ BUDGETS: dict[str, Budget] = {
     # Loaded by the /app homepage.
     "GET /auth/me": Budget(queries=0, max_kb=1),
     "GET /dashboard/current": Budget(queries=2, max_kb=1),
-    "GET /villages/{village_id}/farms": Budget(queries=2, max_kb=3),
+    # 3rd query: next-level upgrade costs, batched for all farms (selectinload).
+    "GET /villages/{village_id}/farms": Budget(queries=3, max_kb=8),
     # Other read endpoints.
     # The three village lookups lazy-load tile -> tile type -> farm slots, then
     # one resource type per slot (N+1). Eager loading would bring them to ~2.

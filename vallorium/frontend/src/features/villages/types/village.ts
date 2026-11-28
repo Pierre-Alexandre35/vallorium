@@ -67,7 +67,21 @@ export type VillageFarm = {
   };
   /** The backend must return this field for refresh-safe construction state. */
   active_upgrade?: ActiveFarmUpgrade | null;
-  next_level_production: number | null;
+  /** null when the field is already at max level. */
+  next_level: NextFarmLevel | null;
+};
+
+export type ResourceCost = {
+  resource_id: number;
+  resource_type: string;
+  amount: number;
+};
+
+export type NextFarmLevel = {
+  level: number;
+  production_per_hour: number;
+  construction_time_seconds: number;
+  costs: ResourceCost[];
 };
 
 export type FarmUpgrade = {
